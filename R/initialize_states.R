@@ -18,7 +18,7 @@ initialize_states <- function(y, m) {
   n_obs <- length(y)
 
   # the level is initialized as the median of x
-  l <- rep(median(y, na.rm = TRUE), n_obs)
+  l <- rep(x[1] - median(y, na.rm = TRUE), n_obs)
 
   # the trend is initialized as median of the median
   # period-over-period changes
@@ -30,18 +30,12 @@ initialize_states <- function(y, m) {
     med_i_not_j[i] <- median((y[i] - y[-i]) / (i - (1:n_obs)[-i]), na.rm = TRUE)
   }
 
-  # the median of those changes is the initial state of the trend
+  # the median of these changes is the initial state of the trend
   b <- rep(median(med_i_not_j, na.rm = TRUE), n_obs)
-  # b <- rep(0, n_obs)
-
-  if (length(x) %% 2 == 0) {
-    trend_idx <- (-length(x)/2 + 1):(length(x)/2)
-  } else {
-    trend_idx <- (-(length(x)-1)/2):((length(x)-1)/2)
-  }
 
   # remove level and trend before trying to identify the seasonality
   # to not mix the other signals into the seasonality
+  trend_idx <- 0:(length(x)-1)
   x_remainder <- x - (unique(l) + unique(b) * trend_idx)
 
   # TODO: l needs to be adjusted to the first obs
@@ -59,6 +53,12 @@ initialize_states <- function(y, m) {
   )
 
   s <- rep_len(s_1_to_m, length.out = n_obs)
+
+  # set to zero if seasonal component is small compared to residual error
+  seasonality_size <- 1 - var(x_remainder - s[-(1:12)]) / var(x_remainder)
+  if (seasonality_size < 0.5) {
+    s <- rep(0, length.out = n_obs)
+  }
 
   return(
     list(
