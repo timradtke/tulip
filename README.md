@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# heuristika
+# heuristika 0.0.0.9000
 
 <!-- badges: start -->
 

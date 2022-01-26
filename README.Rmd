@@ -13,7 +13,13 @@ knitr::opts_chunk$set(
 )
 ```
 
-# heuristika
+```{r, echo = FALSE}
+description <- readLines("DESCRIPTION")
+version <- description[grepl(pattern = "^Version:", x = description)]
+version <- substr(version, nchar("Version: ") + 1, nchar(version))
+```
+
+# heuristika `r version`
 
 <!-- badges: start -->
 <!-- badges: end -->
