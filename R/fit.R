@@ -20,7 +20,8 @@
 fit <- function(y,
                 m,
                 family = c("norm", "cauchy", "nbinom")[1],
-                loss = "bic",
+                loss = "mae_penalized",
+                lambda = 0.5,
                 init_states = NULL,
                 param_grid = NULL) {
 
@@ -82,11 +83,19 @@ fit <- function(y,
   fitted_likelihood <- fit_likelihood(
     y = fitted_states$y,
     y_hat = fitted_states$y_hat,
+    m = m,
+    lambda = lambda,
     family = family,
-    param_grid = param_grid
+    param_grid = param_grid,
+    l = fitted_states$l,
+    b = fitted_states$b,
+    s = fitted_states$s,
+    l_init = fitted_states$l_init,
+    b_init = fitted_states$b_init,
+    s_init = fitted_states$s_init
   )
 
-  opt_idx <- which.min(fitted_likelihood$ic)
+  opt_idx <- which.min(fitted_likelihood$loss)
 
   # back-transform the fitted values
   if (family == "nbinom") {
@@ -112,9 +121,27 @@ fit <- function(y,
       y_median = y_median,
       y_mad = y_mad,
       loglik = fitted_likelihood$loglik[opt_idx],
-      ic = fitted_likelihood$ic[opt_idx],
+      loss = fitted_likelihood$loss[opt_idx],
+      mae = fitted_likelihood$mae[opt_idx],
+      penalty = fitted_likelihood$penalty[opt_idx],
+      lambda = lambda,
       family = family,
-      m = m
+      m = m,
+      full = list(
+        param_grid = param_grid,
+        loglik = fitted_likelihood$loglik,
+        loss = fitted_likelihood$loss,
+        mae = fitted_likelihood$mae,
+        penalty = fitted_likelihood$penalty,
+        sigma = fitted_likelihood$sigma,
+        l = fitted_states$l,
+        b = fitted_states$b,
+        s = fitted_states$s,
+        l_init = fitted_states$l_init,
+        b_init = fitted_states$b_init,
+        s_init = fitted_states$s_init,
+        y_hat = fitted_states$y_hat
+      )
     )
   )
 }
