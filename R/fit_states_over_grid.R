@@ -36,15 +36,15 @@ fit_states_over_grid <- function(y, m, init_states, param_grid) {
 
   return(
     list(
-      y_hat = y_hat[-(1:m), ],
-      y = y[-(1:m), ],
-      e = y_hat[-(1:m), ] - y[-(1:m), ],
-      l = l[-(1:m), ],
-      b = b[-(1:m), ],
-      s = s[-(1:m), ],
-      l_init = l[1:m, ],
-      b_init = b[1:m, ],
-      s_init = s[1:m, ]
+      y_hat = y_hat[-(1:m), , drop = FALSE],
+      y = y[-(1:m), , drop = FALSE],
+      e = y_hat[-(1:m), ] - y[-(1:m), , drop = FALSE],
+      l = l[-(1:m), , drop = FALSE],
+      b = b[-(1:m), , drop = FALSE],
+      s = s[-(1:m), , drop = FALSE],
+      l_init = l[1:m, , drop = FALSE],
+      b_init = b[1:m, , drop = FALSE],
+      s_init = s[1:m, , drop = FALSE]
     )
   )
 }
