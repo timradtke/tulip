@@ -4,7 +4,7 @@
 forecast <- function(object, h = 12, n = 10, family = NULL) {
 
   checkmate::assert_list(
-    x = object, any.missing = FALSE, null.ok = TRUE
+    x = object, null.ok = TRUE
   )
   checkmate::assert_names(
     x = names(object),
