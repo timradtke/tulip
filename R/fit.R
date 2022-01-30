@@ -1,19 +1,3 @@
-#
-# Try:
-# 1) Depending on whether we see "outlier-ish" values after standardization or
-#    initialization, automatically choose "norm" or "cauchy"
-# 2) For outlier-ish values, during state fitting, replace the outlier value by
-#    the predicted value at that point so as to not excessively influence
-#    impact level/trend/seasonality state. In comparison to, for example, BSTS,
-#    the error in the state-space form of the exponential smoothing approach
-#    enters all state components smoothed by the state component's parameter
-#    instead of the observation only. Very large outliers can thereby still
-#    impact the state excessively.
-#    In contrast, when fitting sigma, the outlier should not be replaced so as
-#    to capture the uncertainty in the observation equation.
-#    (the same might then need to be done when drawing sample paths)
-
-
 #' Fit a robust exponential smoothing model via grid search
 #'
 #' @export
@@ -22,8 +6,16 @@ fit <- function(y,
                 family = c("norm", "cauchy", "nbinom")[1],
                 loss = "mae_penalized",
                 lambda = 0.5,
+                lambda_outlier = 10,
                 init_states = NULL,
-                param_grid = NULL) {
+                param_grid = NULL,
+                shift_detection = TRUE,
+                window_size = 5,
+                remove_outliers = TRUE,
+                outlier_budget = 5,
+                min_obs_for_outlier_sigma = 10,
+                seasonality_threshold = 0.5,
+                verbose = TRUE) {
 
   checkmate::assert_numeric(x = y, any.missing = FALSE)
   checkmate::assert_integerish(
@@ -57,9 +49,18 @@ fit <- function(y,
   }
 
   if (is.null(init_states)) {
-    init_states <- initialize_states(y = y, m = m)
+    init_states <- initialize_states(
+      y = y,
+      m = m,
+      shift_detection = shift_detection,
+      window_size = window_size,
+      seasonality_threshold = seasonality_threshold
+    )
   } else {
-    checkmate::assert_names(x = names(init_states), subset.of = c("l", "b", "s"))
+    checkmate::assert_names(
+      x = names(init_states),
+      subset.of = c("l", "b", "s")
+    )
   }
 
   if (is.null(param_grid)) {
@@ -77,7 +78,10 @@ fit <- function(y,
     y = y,
     m = m,
     init_states = init_states,
-    param_grid = param_grid
+    param_grid = param_grid,
+    remove_outliers = remove_outliers,
+    outlier_budget = outlier_budget,
+    min_obs_for_outlier_sigma = min_obs_for_outlier_sigma
   )
 
   fitted_likelihood <- fit_likelihood(
@@ -85,6 +89,7 @@ fit <- function(y,
     y_hat = fitted_states$y_hat,
     m = m,
     lambda = lambda,
+    lambda_outlier = lambda_outlier,
     family = family,
     param_grid = param_grid,
     l = fitted_states$l,
@@ -92,7 +97,8 @@ fit <- function(y,
     s = fitted_states$s,
     l_init = fitted_states$l_init,
     b_init = fitted_states$b_init,
-    s_init = fitted_states$s_init
+    s_init = fitted_states$s_init,
+    n_cleaned = fitted_states$n_cleaned
   )
 
   opt_idx <- which.min(fitted_likelihood$loss)
@@ -106,10 +112,14 @@ fit <- function(y,
 
   return(
     list(
-      x = x,
-      x_hat = x_hat,
-      y = y,
-      y_hat = fitted_states$y_hat[, opt_idx],
+      y_hat = x_hat,
+      y = x,
+      x = y,
+      x_hat = fitted_states$y_hat[, opt_idx],
+      x_cleaned = fitted_states$y_cleaned[, opt_idx],
+      n_cleaned = fitted_states$n_cleaned[opt_idx],
+      x_na = fitted_states$y_na[, opt_idx],
+      param_grid = param_grid[opt_idx, ],
       sigma = fitted_likelihood$sigma[opt_idx],
       l = fitted_states$l[, opt_idx],
       b = fitted_states$b[, opt_idx],
@@ -117,13 +127,14 @@ fit <- function(y,
       l_init = fitted_states$l_init[, opt_idx],
       b_init = fitted_states$b_init[, opt_idx],
       s_init = fitted_states$s_init[, opt_idx],
-      param_grid = param_grid[opt_idx, ],
+      shift_range = init_states$shift_range,
       y_median = y_median,
       y_mad = y_mad,
       loglik = fitted_likelihood$loglik[opt_idx],
       loss = fitted_likelihood$loss[opt_idx],
       mae = fitted_likelihood$mae[opt_idx],
       penalty = fitted_likelihood$penalty[opt_idx],
+      penalty_outlier = fitted_likelihood$penalty_outlier[opt_idx],
       lambda = lambda,
       family = family,
       m = m,
@@ -133,6 +144,7 @@ fit <- function(y,
         loss = fitted_likelihood$loss,
         mae = fitted_likelihood$mae,
         penalty = fitted_likelihood$penalty,
+        penalty_outlier = fitted_likelihood$penalty_outlier,
         sigma = fitted_likelihood$sigma,
         l = fitted_states$l,
         b = fitted_states$b,
@@ -140,7 +152,9 @@ fit <- function(y,
         l_init = fitted_states$l_init,
         b_init = fitted_states$b_init,
         s_init = fitted_states$s_init,
-        y_hat = fitted_states$y_hat
+        x_hat = fitted_states$y_hat,
+        x_cleaned = fitted_states$y_cleaned,
+        n_cleaned = fitted_states$n_cleaned
       )
     )
   )

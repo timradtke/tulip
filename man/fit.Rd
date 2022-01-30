@@ -8,9 +8,18 @@ fit(
   y,
   m,
   family = c("norm", "cauchy", "nbinom")[1],
-  loss = "bic",
+  loss = "mae_penalized",
+  lambda = 0.5,
+  lambda_outlier = 10,
   init_states = NULL,
-  param_grid = NULL
+  param_grid = NULL,
+  shift_detection = TRUE,
+  window_size = 5,
+  remove_outliers = TRUE,
+  outlier_budget = 5,
+  min_obs_for_outlier_sigma = 10,
+  seasonality_threshold = 0.5,
+  verbose = TRUE
 )
 }
 \description{
