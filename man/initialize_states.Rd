@@ -4,7 +4,31 @@
 \alias{initialize_states}
 \title{Initialize state components given time series}
 \usage{
-initialize_states(y, m)
+initialize_states(
+  y,
+  m,
+  shift_detection,
+  window_size = 5,
+  seasonality_threshold = 0.5,
+  verbose = TRUE
+)
+}
+\arguments{
+\item{y}{Input time series to fit the model against}
+
+\item{m}{Scalar indicating the period length of the potential seasonality}
+
+\item{shift_detection}{Logical; should the automatic shift detection be run?}
+
+\item{window_size}{Integer defining the size of the windows used to detect
+structural shifts in the time series; since we compare windows based on
+the median of the trends in the window, odd values are easier to handle.
+\code{window_size} limits how precise the trend shift can be identified. The
+shift cannot be identified more precise than within a window of
+\code{window_size} candidate values.}
+
+\item{seasonality_threshold}{Share of residual variance to be explained by
+seasonal component at least if it is to be used}
 }
 \description{
 Initialize state components given time series
