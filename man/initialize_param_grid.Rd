@@ -2,10 +2,40 @@
 % Please edit documentation in R/initialize_param_grid.R
 \name{initialize_param_grid}
 \alias{initialize_param_grid}
-\title{Initialize a grid of paramaters to perform grid search}
+\title{Initialize a grid of paramaters to perform grid search over}
 \usage{
-initialize_param_grid()
+initialize_param_grid(
+  n_alpha = 11,
+  n_beta = 11,
+  n_gamma = 11,
+  beta_smaller_than_alpha = TRUE,
+  use_logistic = TRUE,
+  logistic_limit = 4
+)
+}
+\arguments{
+\item{n_alpha}{Base number of \code{alpha} candidate values}
+
+\item{n_beta}{Base number of \code{beta} candidate values}
+
+\item{n_gamma}{Base number of \code{gamma} candidate values}
+
+\item{beta_smaller_than_alpha}{Logical; should \code{beta} be constrained to
+always be smaller than or equal to alpha?}
+
+\item{use_logistic}{Logical; should the logistic function be used to
+distribute the base candidate values? This is useful if the boundaries at
+0 and 1 should be more closely trialed than values around 0.5. If FALSE,
+the base candidate values are distributed linearly between 0 and 1.}
+
+\item{logistic_limit}{Most extreme value provided into the logistic function;
+if \code{logistic_limit} is x, then the largest value trialed besides 1 is
+\code{1 / (1 + exp(-1 * logistic_limit))}. The default is 4, corresponding to
+a value of 0.982.}
 }
 \description{
-Currently small for development purposes.
+Initialize a grid of paramaters to perform grid search over
+}
+\examples{
+initialize_param_grid()[1:10, ]
 }
