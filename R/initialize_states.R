@@ -55,7 +55,7 @@ initialize_states <- function(y,
   x_remainder <- x - (unique(l) + unique(b) * trend_idx)
 
   s <- rep(0, length.out = n_obs)
-  if (length(x) > (2 * m + 1)) {
+  if (length(x) > (2 * m + 1) && m > 1) {
     s_1_to_m <- apply(
       # need to fill up y to full season
       X = matrix(c(x_remainder,
@@ -71,7 +71,7 @@ initialize_states <- function(y,
     # set to zero if seasonal component is small compared to residual error;
     # use `mad()` as robust alternative for `sd()`; the seasonality is supposed
     # to explain at least 100*`seasonality_threshold`% of the residual variance
-    seasonality_size <- 1 - mad(x_remainder - s[-(1:12)])^2 / mad(x_remainder)^2
+    seasonality_size <- 1 - mad(x_remainder - s[-(1:m)])^2 / mad(x_remainder)^2
     if (seasonality_size < seasonality_threshold) {
       s <- rep(0, length.out = n_obs)
     }

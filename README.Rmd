@@ -175,6 +175,43 @@ for (j in seq_along(quantiles)) {
 points(deaths, pch = 19, col = "black", cex = 0.5)
 ```
 
+## UKgas
+
+```{r ukgas}
+ukgas <- as.numeric(UKgas)
+ug_n <- length(ukgas)
+
+tictoc::tic()
+ug_fit <- heuristika::fit(
+  y = log1p(ukgas[1:(ug_n-12)]), m = 4, family = "norm", 
+)
+tictoc::toc()
+
+tictoc::tic()
+ug_fc <- heuristika::forecast(
+  object = ug_fit, 
+  h = 12, 
+  n = 10000,
+  switch_to_cauchy_if_outliers = FALSE
+)
+tictoc::toc()
+```
+
+```{r ukgas_plot, echo = FALSE}
+plot(ukgas, ylim = c(0, 1500), col = "white")
+lines(expm1(ug_fit$y_hat), col = "blue")
+for (j in seq_along(quantiles)) {
+  lines(
+    x = (ug_n-12+1):ug_n, 
+    y = apply(expm1(ug_fc), quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
+    col = rgb(red = 0, green = 0, blue = 1, 
+              alpha = 1 - abs(0.5 - quantiles[j])),
+    lwd = 1 - abs(0.5 - quantiles[j])
+  )
+}
+points(ukgas, pch = 19, col = "black", cex = 0.5)
+```
+
 ## References
 
 Michael Bohlke-Schneider, Shubham Kapoor, Tim Januschowski (2020). *Resilient Neural Forecasting Systems*. https://www.amazon.science/publications/resilient-neural-forecasting-systems

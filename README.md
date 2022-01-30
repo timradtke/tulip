@@ -105,12 +105,12 @@ ap_fit <- heuristika::fit(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.651 sec elapsed
+#> 1.05 sec elapsed
 
 tictoc::tic()
 ap_fc <- heuristika::forecast(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
-#> 0.117 sec elapsed
+#> 0.161 sec elapsed
 ```
 
 <img src="man/figures/README-airpassengers_plot-1.png" width="100%" />
@@ -126,7 +126,7 @@ d_fit <- heuristika::fit(
   y = deaths[1:(d_n-12)], m = 12, family = "norm", 
 )
 tictoc::toc()
-#> 0.292 sec elapsed
+#> 0.28 sec elapsed
 
 tictoc::tic()
 d_fc <- heuristika::forecast(
@@ -136,10 +136,36 @@ d_fc <- heuristika::forecast(
   switch_to_cauchy_if_outliers = FALSE
 )
 tictoc::toc()
-#> 0.238 sec elapsed
+#> 0.16 sec elapsed
 ```
 
 <img src="man/figures/README-deaths_plot-1.png" width="100%" />
+
+## UKgas
+
+``` r
+ukgas <- as.numeric(UKgas)
+ug_n <- length(ukgas)
+
+tictoc::tic()
+ug_fit <- heuristika::fit(
+  y = log1p(ukgas[1:(ug_n-12)]), m = 4, family = "norm", 
+)
+tictoc::toc()
+#> 0.452 sec elapsed
+
+tictoc::tic()
+ug_fc <- heuristika::forecast(
+  object = ug_fit, 
+  h = 12, 
+  n = 10000,
+  switch_to_cauchy_if_outliers = FALSE
+)
+tictoc::toc()
+#> 0.108 sec elapsed
+```
+
+<img src="man/figures/README-ukgas_plot-1.png" width="100%" />
 
 ## References
 
