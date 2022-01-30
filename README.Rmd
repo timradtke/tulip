@@ -65,11 +65,16 @@ plot(x = 1:67, y = c(y, rep(NA, 12)), pch = 19,
      ylim = c(min(y)*0.95, max(y)*1.05),
      xlab = NA, ylab = NA)
 lines(1:67, c(y, rep(NA, 12)))
-lines(fitted_model$x_hat, col = rgb(red = 0, green = 0, blue = 1))
+lines(fitted_model$y_hat, col = rgb(red = 0, green = 0, blue = 1))
+lines(fitted_model$x_cleaned, col = rgb(red = 0, green = 0, blue = 1))
 ```
 
 ```{r}
-fc <- heuristika::forecast(object = fitted_model, h = 12, n = 5000)
+fc <- heuristika::forecast(
+  object = fitted_model, 
+  h = 12, 
+  n = 10000
+)
 ```
 
 ```{r plot_sample_paths}
@@ -99,6 +104,75 @@ for (j in seq_along(quantiles)) {
     lwd = 1 - abs(0.5 - quantiles[j])
     )
 }
+```
+
+## AirPassengers
+
+```{r airpassengers}
+air_passengers <- log1p(as.numeric(AirPassengers))
+ap_n <- length(air_passengers)
+
+tictoc::tic()
+ap_fit <- heuristika::fit(
+  y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
+)
+tictoc::toc()
+
+tictoc::tic()
+ap_fc <- heuristika::forecast(object = ap_fit, h = 12, n = 10000)
+tictoc::toc()
+```
+
+```{r airpassengers_plot, echo = FALSE}
+plot(expm1(air_passengers), xlim = c(80, ap_n), ylim = c(0, 800), col = "white")
+lines(expm1(ap_fit$y_hat), col = "blue")
+for (j in seq_along(quantiles)) {
+  lines(
+    x = (ap_n-12+1):ap_n, 
+    y = apply(expm1(ap_fc), quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
+    col = rgb(red = 0, green = 0, blue = 1, 
+              alpha = 1 - abs(0.5 - quantiles[j])),
+    lwd = 1 - abs(0.5 - quantiles[j])
+  )
+}
+points(expm1(air_passengers), pch = 19, col = "black", cex = 0.5)
+```
+
+## deaths
+
+```{r deaths}
+deaths <- as.numeric(fdeaths)
+d_n <- length(deaths)
+
+tictoc::tic()
+d_fit <- heuristika::fit(
+  y = deaths[1:(d_n-12)], m = 12, family = "norm", 
+)
+tictoc::toc()
+
+tictoc::tic()
+d_fc <- heuristika::forecast(
+  object = d_fit, 
+  h = 12, 
+  n = 10000,
+  switch_to_cauchy_if_outliers = FALSE
+)
+tictoc::toc()
+```
+
+```{r deaths_plot, echo = FALSE}
+plot(deaths, ylim = c(0, 1500), col = "white")
+lines(d_fit$y_hat, col = "blue")
+for (j in seq_along(quantiles)) {
+  lines(
+    x = (d_n-12+1):d_n, 
+    y = apply(d_fc, quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
+    col = rgb(red = 0, green = 0, blue = 1, 
+              alpha = 1 - abs(0.5 - quantiles[j])),
+    lwd = 1 - abs(0.5 - quantiles[j])
+  )
+}
+points(deaths, pch = 19, col = "black", cex = 0.5)
 ```
 
 ## References

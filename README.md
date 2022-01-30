@@ -54,7 +54,11 @@ fitted_model <- heuristika::fit(y = y, m = 12, family = "norm")
 <img src="man/figures/README-plot_fit-1.png" width="100%" />
 
 ``` r
-fc <- heuristika::forecast(object = fitted_model, h = 12, n = 5000)
+fc <- heuristika::forecast(
+  object = fitted_model, 
+  h = 12, 
+  n = 10000
+)
 ```
 
 ``` r
@@ -89,6 +93,53 @@ for (j in seq_along(quantiles)) {
 ```
 
 <img src="man/figures/README-plot_quantiles-1.png" width="100%" />
+
+## AirPassengers
+
+``` r
+air_passengers <- log1p(as.numeric(AirPassengers))
+ap_n <- length(air_passengers)
+
+tictoc::tic()
+ap_fit <- heuristika::fit(
+  y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
+)
+tictoc::toc()
+#> 1.651 sec elapsed
+
+tictoc::tic()
+ap_fc <- heuristika::forecast(object = ap_fit, h = 12, n = 10000)
+tictoc::toc()
+#> 0.117 sec elapsed
+```
+
+<img src="man/figures/README-airpassengers_plot-1.png" width="100%" />
+
+## deaths
+
+``` r
+deaths <- as.numeric(fdeaths)
+d_n <- length(deaths)
+
+tictoc::tic()
+d_fit <- heuristika::fit(
+  y = deaths[1:(d_n-12)], m = 12, family = "norm", 
+)
+tictoc::toc()
+#> 0.292 sec elapsed
+
+tictoc::tic()
+d_fc <- heuristika::forecast(
+  object = d_fit, 
+  h = 12, 
+  n = 10000,
+  switch_to_cauchy_if_outliers = FALSE
+)
+tictoc::toc()
+#> 0.238 sec elapsed
+```
+
+<img src="man/figures/README-deaths_plot-1.png" width="100%" />
 
 ## References
 
