@@ -4,7 +4,25 @@
 \alias{fit_states_over_grid}
 \title{Fit parameters given time series, initial states, and parameter grid}
 \usage{
-fit_states_over_grid(y, m, init_states, param_grid)
+fit_states_over_grid(
+  y,
+  m,
+  init_states,
+  param_grid,
+  remove_outliers,
+  outlier_budget,
+  min_obs_for_outlier_sigma = 10
+)
+}
+\arguments{
+\item{y}{Time series to which the model is fitted}
+
+\item{m}{Scalar indicating the period length of the suspected seasonality}
+
+\item{init_states}{A list of initial states as returned by
+\code{initialize_states()}}
+
+\item{param_grid}{A matrix of possible parameter values used in grid search}
 }
 \description{
 Fit parameters given time series, initial states, and parameter grid

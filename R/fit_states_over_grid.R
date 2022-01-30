@@ -1,6 +1,18 @@
 #' Fit parameters given time series, initial states, and parameter grid
 #'
-fit_states_over_grid <- function(y, m, init_states, param_grid) {
+#' @param y Time series to which the model is fitted
+#' @param m Scalar indicating the period length of the suspected seasonality
+#' @param init_states A list of initial states as returned by
+#'     `initialize_states()`
+#' @param param_grid A matrix of possible parameter values used in grid search
+#'
+fit_states_over_grid <- function(y,
+                                 m,
+                                 init_states,
+                                 param_grid,
+                                 remove_outliers,
+                                 outlier_budget,
+                                 min_obs_for_outlier_sigma = 10) {
 
   n <- length(y)
   k <- dim(param_grid)[1] # number of parameter combinations to trial
@@ -21,8 +33,43 @@ fit_states_over_grid <- function(y, m, init_states, param_grid) {
   # for each time step, perform the same transformations for each set of
   # parameters in vectorized form
 
+  y_orig <- y
+  y_na <- y
+  outlier_budget <- rep(outlier_budget, k)
+
   for (i in (m + 1):(m + n)) {
     y_hat[i, ] <- l[i-1, ] + b[i-1, ] + s[i-m, ]
+
+    ############################################################################
+
+    if (remove_outliers &&
+        i > (m + min_obs_for_outlier_sigma) &&
+        any(outlier_budget > 0)) {
+      # overwrite actuals in case of outliers given errors so far;
+      # start only when there are some errors available to compute the variance
+      tmp_sigma <- sqrt(
+        colMeans(x = (y_hat[1:(i-1), , drop = FALSE] -
+                        y_na[1:(i-1), , drop = FALSE])^2, na.rm = TRUE) -
+          colMeans(x = y_hat[1:(i-1), , drop = FALSE] -
+                     y_na[1:(i-1), , drop = FALSE], na.rm = TRUE)^2
+      )
+
+      is_outlier <- pnorm(
+        q = abs(as.numeric(y_hat[i,] - y[i,])),
+        mean = 0,
+        sd = tmp_sigma
+      ) > 0.99
+
+      outlier_budget <- outlier_budget - is_outlier
+
+      # use `y_hat` instead of `y` to continue update of parameters
+      y[i,] <- ifelse(is_outlier & outlier_budget > 0, y_hat[i,], y[i,])
+      # use `NA` instead of `y` to continue update of `tmp_sigma` next round
+      # (we can't use `y_hat` because this will make `tmp_sigma` converge to 0)
+      y_na[i,] <- ifelse(is_outlier & outlier_budget > 0, NA, y[i,])
+    }
+
+    ############################################################################
 
     l[i, ] <- param_grid[, "alpha"] * (y[i, ] - s[i-m, ]) +
       param_grid[, "one_minus_alpha"] * (l[i-1, ] + b[i-1, ])
@@ -37,8 +84,11 @@ fit_states_over_grid <- function(y, m, init_states, param_grid) {
   return(
     list(
       y_hat = y_hat[-(1:m), , drop = FALSE],
-      y = y[-(1:m), , drop = FALSE],
-      e = y_hat[-(1:m), ] - y[-(1:m), , drop = FALSE],
+      y = y_orig[-(1:m), , drop = FALSE],
+      y_cleaned = y[-(1:m), , drop = FALSE],
+      y_na = y_na[-(1:m), , drop = FALSE],
+      n_cleaned = colSums(is.na(y_na[-(1:m), , drop = FALSE])),
+      e = y_hat[-(1:m), ] - y_orig[-(1:m), , drop = FALSE],
       l = l[-(1:m), , drop = FALSE],
       b = b[-(1:m), , drop = FALSE],
       s = s[-(1:m), , drop = FALSE],

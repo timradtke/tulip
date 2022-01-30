@@ -1,7 +1,11 @@
 #' Draw sample paths from a fitted object to forecast
 #'
 #' @export
-forecast <- function(object, h = 12, n = 10, family = NULL) {
+forecast <- function(object,
+                     h = 12,
+                     n = 10000,
+                     family = NULL,
+                     switch_to_cauchy_if_outliers = TRUE) {
 
   checkmate::assert_list(
     x = object, null.ok = TRUE
@@ -10,7 +14,7 @@ forecast <- function(object, h = 12, n = 10, family = NULL) {
     x = names(object),
     must.include = c("l", "b", "s", "l_init", "b_init", "s_init",
                      "param_grid", "sigma", "y", "y_hat", "x", "x_hat",
-                     "family", "m", "y_median", "y_mad")
+                     "x_na", "family", "m", "y_median", "y_mad")
   )
   checkmate::assert_integerish(
     x = h, any.missing = FALSE, null.ok = FALSE, len = 1
@@ -23,6 +27,13 @@ forecast <- function(object, h = 12, n = 10, family = NULL) {
   )
 
   if (is.null(family)) family <- object$family
+
+  if (family == "norm" &&
+      switch_to_cauchy_if_outliers &&
+      object$n_cleaned > 1 + ceiling(0.01 * length(object$x))) {
+    family <- "cauchy"
+    object$sigma <- IQR(x = object$x_hat - object$x) / 2
+  }
 
   # draw IID errors to be used when creating sample paths
   if (family == "cauchy") {
@@ -71,6 +82,9 @@ forecast <- function(object, h = 12, n = 10, family = NULL) {
   s <- matrix(rep_len(s, length.out = (m + h) * n), ncol = n, byrow = FALSE)
 
   y <- matrix(rep(NA, (m + h) * n), ncol = n)
+  y_orig <- matrix(rep(NA, (m + h) * n), ncol = n)
+  m_e_orig <- m_e
+  fit_clean_sigma <- sd(object$x_na, na.rm = TRUE)
 
   for (i in (m+1):(m+h)) {
     if (family == "nbinom") {
@@ -81,6 +95,20 @@ forecast <- function(object, h = 12, n = 10, family = NULL) {
       )
       y[i, ] <- log1p(tmp_y)
     } else {
+
+      y_orig[i, ] <- l[i-1, ] + b[i-1, ] + s[i-m, ] + m_e[i-m, ]
+
+      if (!is.na(fit_clean_sigma) && family == "cauchy") {
+        is_outlier <- pnorm(
+          q = abs(m_e[i-m, ]),
+          mean = 0,
+          sd = fit_clean_sigma
+        ) > 0.99
+
+        # use `y_hat` instead of `y` to continue update of parameters
+        m_e[i-m, ] <- ifelse(is_outlier, 0, m_e[i-m, ])
+      }
+
       y[i, ] <- l[i-1, ] + b[i-1, ] + s[i-m, ] + m_e[i-m, ]
     }
 
@@ -93,13 +121,13 @@ forecast <- function(object, h = 12, n = 10, family = NULL) {
   }
 
   # drop the placeholders used for initial states
-  y <- y[-(1:m), ]
+  y_orig <- y_orig[-(1:m), ]
 
   if (family %in% c("norm", "cauchy")) {
-    y <- y * object$y_mad + object$y_median
+    y_orig <- y_orig * object$y_mad + object$y_median
   } else if (family == "nbinom") {
-    y <- expm1(y)
+    y_orig <- expm1(y_orig)
   }
 
-  return(y)
+  return(y_orig)
 }

@@ -4,7 +4,13 @@
 \alias{forecast}
 \title{Draw sample paths from a fitted object to forecast}
 \usage{
-forecast(object, h = 12, n = 10, family = NULL)
+forecast(
+  object,
+  h = 12,
+  n = 10000,
+  family = NULL,
+  switch_to_cauchy_if_outliers = TRUE
+)
 }
 \description{
 Draw sample paths from a fitted object to forecast

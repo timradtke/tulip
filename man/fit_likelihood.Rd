@@ -4,8 +4,64 @@
 \alias{fit_likelihood}
 \title{Fit error / observation equation and compute loss}
 \usage{
-fit_likelihood(y, y_hat, m, family, param_grid)
+fit_likelihood(
+  y,
+  y_hat,
+  lambda,
+  lambda_outlier,
+  m,
+  family,
+  param_grid,
+  l,
+  b,
+  s,
+  l_init,
+  b_init,
+  s_init,
+  n_cleaned
+)
+}
+\arguments{
+\item{y}{Input time series to fit the model against}
+
+\item{y_hat}{Fitted values after fitting the states and parameters to y}
+
+\item{lambda}{Scalar used to scale the penalization of removed outliers}
+
+\item{m}{Scalar indicating the suspected seasonality}
+
+\item{family}{Distribution to be used as likelihood function}
+
+\item{param_grid}{A matrix of possible parameter values used in grid search}
+
+\item{l}{Fitted level state}
+
+\item{b}{Fitted trend state}
+
+\item{s}{Fitted seasonal state}
+
+\item{l_init}{Initial level state}
+
+\item{b_init}{Initial trend state}
+
+\item{s_init}{Initial seasonal state}
+
+\item{n_cleaned}{Number of values treated as outlier}
 }
 \description{
 Fit error / observation equation and compute loss
+}
+\examples{
+y <- matrix(c(1, 0, 1, -0.05), ncol = 2)
+y_hat <- matrix(c(0.9, 0.25, 1.05, 0.05), ncol = 2)
+m <- 12
+family <- "norm"
+param_grid <- initialize_param_grid()[6:7,]
+l <- matrix(c(0.8, 0.2, 1, 0), ncol = 2)
+b <- matrix(c(0.01, 0.01, 0.01, 0.01), ncol = 2)
+s <- matrix(c(0.099, 0.04, 0.04, 0.04), ncol = 2)
+l_init <- matrix(c(0.8, 0.2, 1, 0), ncol = 2)
+b_init <- matrix(c(0.01, 0.01, 0.01, 0.01), ncol = 2)
+s_init <- matrix(c(0.099, 0.04, 0.04, 0.04), ncol = 2)
+
 }
