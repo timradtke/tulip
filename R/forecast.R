@@ -14,7 +14,7 @@ forecast <- function(object,
     x = names(object),
     must.include = c("l", "b", "s", "l_init", "b_init", "s_init",
                      "param_grid", "sigma", "y", "y_hat", "x", "x_hat",
-                     "x_na", "family", "m", "y_median", "y_mad")
+                     "x_na", "family", "m", "y_median", "y_mad", "comment")
   )
   checkmate::assert_integerish(
     x = h, any.missing = FALSE, null.ok = FALSE, len = 1
@@ -25,6 +25,24 @@ forecast <- function(object,
   checkmate::assert_choice(
     x = family, choices = c("norm", "cauchy", "nbinom"), null.ok = TRUE
   )
+
+  if (isTRUE(object$comment == "no_variance")) {
+    return(
+      matrix(unique(object$y), ncol = n, nrow = h)
+    )
+  }
+  if (isTRUE(object$comment == "single_obs")) {
+    return(
+      matrix(unique(object$y), ncol = n, nrow = h)
+    )
+  }
+  if (isTRUE(object$comment == "mad_zero")) {
+    warning("Using a bootstrap forecast since the MAD of the input `y` is 0.")
+    return(
+      matrix(sample(x = object$y, size = n * h, replace = TRUE),
+             ncol = n, nrow = h)
+    )
+  }
 
   if (is.null(family)) family <- object$family
 

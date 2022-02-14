@@ -48,7 +48,7 @@ library(heuristika)
 
 y <- rnorm(55, mean = 25 + sinpi(1:55 / 6), sd = 0.5)
 
-fitted_model <- heuristika::fit(y = y, m = 12, family = "norm")
+fitted_model <- heuristika::fit(y = y, m = 12, family = "auto")
 ```
 
 <img src="man/figures/README-plot_fit-1.png" width="100%" />
@@ -59,6 +59,8 @@ fc <- heuristika::forecast(
   h = 12, 
   n = 10000
 )
+#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
+#> only the first element will be used
 ```
 
 ``` r
@@ -105,12 +107,14 @@ ap_fit <- heuristika::fit(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.05 sec elapsed
+#> 1.488 sec elapsed
 
 tictoc::tic()
 ap_fc <- heuristika::forecast(object = ap_fit, h = 12, n = 10000)
+#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
+#> only the first element will be used
 tictoc::toc()
-#> 0.161 sec elapsed
+#> 0.148 sec elapsed
 ```
 
 <img src="man/figures/README-airpassengers_plot-1.png" width="100%" />
@@ -126,7 +130,7 @@ d_fit <- heuristika::fit(
   y = deaths[1:(d_n-12)], m = 12, family = "norm", 
 )
 tictoc::toc()
-#> 0.28 sec elapsed
+#> 0.484 sec elapsed
 
 tictoc::tic()
 d_fc <- heuristika::forecast(
@@ -135,8 +139,10 @@ d_fc <- heuristika::forecast(
   n = 10000,
   switch_to_cauchy_if_outliers = FALSE
 )
+#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
+#> only the first element will be used
 tictoc::toc()
-#> 0.16 sec elapsed
+#> 0.331 sec elapsed
 ```
 
 <img src="man/figures/README-deaths_plot-1.png" width="100%" />
@@ -152,7 +158,7 @@ ug_fit <- heuristika::fit(
   y = log1p(ukgas[1:(ug_n-12)]), m = 4, family = "norm", 
 )
 tictoc::toc()
-#> 0.452 sec elapsed
+#> 0.941 sec elapsed
 
 tictoc::tic()
 ug_fc <- heuristika::forecast(
@@ -161,8 +167,10 @@ ug_fc <- heuristika::forecast(
   n = 10000,
   switch_to_cauchy_if_outliers = FALSE
 )
+#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
+#> only the first element will be used
 tictoc::toc()
-#> 0.108 sec elapsed
+#> 0.089 sec elapsed
 ```
 
 <img src="man/figures/README-ukgas_plot-1.png" width="100%" />

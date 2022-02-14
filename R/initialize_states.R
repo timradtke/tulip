@@ -39,6 +39,7 @@ initialize_states <- function(y,
     med_i_not_j[i] <- median((y[i] - y[-i]) / (i - (1:n_obs)[-i]), na.rm = TRUE)
   }
   b <- rep(median(med_i_not_j, na.rm = TRUE), n_obs)
+  if (anyNA(b)) b <- rep(b, n_obs)
 
   shift_range <- c(NA, NA)
   if (shift_detection && abs(unique(b)) > (1 / length(x))) {
@@ -66,14 +67,18 @@ initialize_states <- function(y,
       na.rm = TRUE
     )
 
-    s <- rep_len(s_1_to_m, length.out = n_obs)
+    if (anyNA(s_1_to_m)) {
+      s <- rep_len(0, length.out = n_obs)
+    } else {
+      s <- rep_len(s_1_to_m, length.out = n_obs)
 
-    # set to zero if seasonal component is small compared to residual error;
-    # use `mad()` as robust alternative for `sd()`; the seasonality is supposed
-    # to explain at least 100*`seasonality_threshold`% of the residual variance
-    seasonality_size <- 1 - mad(x_remainder - s[-(1:m)])^2 / mad(x_remainder)^2
-    if (seasonality_size < seasonality_threshold) {
-      s <- rep(0, length.out = n_obs)
+      # set to zero if seasonal component is small compared to residual error;
+      # use `mad()` as robust alternative for `sd()`; the seasonality is supposed
+      # to explain at least 100*`seasonality_threshold`% of the residual variance
+      seasonality_size <- 1 - mad(x_remainder - s[-(1:m)])^2 / mad(x_remainder)^2
+      if (seasonality_size < seasonality_threshold) {
+        s <- rep(0, length.out = n_obs)
+      }
     }
   }
 

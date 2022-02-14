@@ -30,6 +30,9 @@ fit_states_over_grid <- function(y,
   b <- matrix(init_states$b, nrow = m + n, ncol = k, byrow = FALSE)
   s <- matrix(init_states$s, nrow = m + n, ncol = k, byrow = FALSE)
 
+  b[, param_grid[, "beta"] + param_grid[, "one_minus_beta"] < 0.00001] <- 0
+  s[, param_grid[, "gamma"] + param_grid[, "one_minus_gamma"] < 0.00001] <- 0
+
   # for each time step, perform the same transformations for each set of
   # parameters in vectorized form
 

@@ -57,7 +57,7 @@ library(heuristika)
 
 y <- rnorm(55, mean = 25 + sinpi(1:55 / 6), sd = 0.5)
 
-fitted_model <- heuristika::fit(y = y, m = 12, family = "norm")
+fitted_model <- heuristika::fit(y = y, m = 12, family = "auto")
 ```
 
 ```{r plot_fit, echo = FALSE}

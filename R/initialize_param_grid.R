@@ -17,9 +17,9 @@
 #' @export
 #' @examples
 #' initialize_param_grid()[1:10, ]
-initialize_param_grid <- function(n_alpha = 11,
-                                  n_beta = 11,
-                                  n_gamma = 11,
+initialize_param_grid <- function(n_alpha = 15,
+                                  n_beta = 15,
+                                  n_gamma = 15,
                                   beta_smaller_than_alpha = TRUE,
                                   use_logistic = TRUE,
                                   logistic_limit = 4) {

@@ -1,0 +1,199 @@
+#' Fit error / observation equation and compute loss
+#'
+#' @param param_grid A matrix of possible parameter values used in grid search
+#' @param priors A named list of lists of prior parameters
+#' @param family Distribution to be used as likelihood function
+#' @param m Scalar indicating the suspected seasonality
+#' @param y Input time series to fit the model against
+#' @param y_hat Fitted values after fitting the states and parameters to y
+#' @param n_cleaned Number of values treated as outlier
+#'
+#' @examples
+#' y <- matrix(c(1, 0, 1, -0.05), ncol = 2)
+#' y_hat <- matrix(c(0.9, 0.25, 1.05, 0.05), ncol = 2)
+#' m <- 12
+#' family <- "norm"
+#' param_grid <- initialize_param_grid()[6:7,]
+#' priors <- list(
+#'   error = list(
+#'     shape = 3,
+#'     rate = 2 * 0.75
+#'     # inv_gamma_prior_alpha <- 3
+#'     # inv_gamma_prior_beta <- (inv_gamma_prior_alpha - 1) * 0.75
+#'   ),
+#'   level = list(
+#'     alpha = 2,
+#'     beta = 6
+#'   ),
+#'   trend = list(
+#'     prob = 0.5,
+#'     alpha = 2,
+#'     beta = 18
+#'   ),
+#'   seasonality = list(
+#'     prob = 0.5,
+#'     alpha = 2,
+#'     beta = 6
+#'   ),
+#'   anomaly = list(
+#'     prob = 0.01
+#'   )
+#' )
+#'
+fit_map <- function(param_grid,
+                    priors,
+                    family,
+                    m,
+                    y,
+                    y_hat,
+                    n_cleaned) {
+
+  n_obs <- dim(y)[1]
+  errors <- y_hat - y
+
+  l_smooth <- log_prior_smooth(
+    priors = priors,
+    param_grid = param_grid,
+    n_obs = n_obs,
+    n_cleaned = n_cleaned
+  )
+
+  if (family %in% c("norm", "auto")) {
+    sigma_norm <- fit_sigma(
+      errors = errors,
+      n_obs = n_obs,
+      method = "norm",
+      shape = priors$error$shape,
+      rate = priors$error$rate
+    )
+    l_sigma_norm <- log_prior_sigma(priors = priors, sigma = sigma_norm)
+    l_norm <- log_lik_norm(errors = errors, sigma = sigma_norm)
+  }
+  if (family %in% c("cauchy", "auto")) {
+    sigma_cauchy <- fit_sigma(errors = errors, n_obs = n_obs, method = "cauchy")
+    l_sigma_cauchy <- log_prior_sigma(priors = priors, sigma = sigma_cauchy)
+    l_cauchy <- log_lik_cauchy(errors = errors, sigma = sigma_cauchy)
+  }
+
+  log_joint <- l_smooth
+  idx_wrap <- length(log_joint)
+
+  if (family == "norm") {
+    family_joint <- rep(family, length(log_joint))
+    sigma <- sigma_norm
+    log_joint <- log_joint + l_sigma_norm + l_norm
+  } else if (family == "cauchy") {
+    family_joint <- rep(family, length(log_joint))
+    sigma <- sigma_cauchy
+    log_joint <- log_joint + l_sigma_norm + l_norm
+  } else if (family == "auto") {
+    family_joint <- rep(c("norm", "cauchy"), each = length(log_joint))
+    sigma <- c(sigma_norm, sigma_cauchy)
+    log_joint <- log_joint +
+      c(l_sigma_norm, l_sigma_cauchy) +
+      c(l_norm, l_cauchy)
+  }
+
+  return(
+    list(
+      sigma = sigma,
+      log_joint = log_joint,
+      family = family_joint,
+      idx_wrap = idx_wrap
+    )
+  )
+}
+
+dbernoulli <- function(x, prob, log = FALSE) {
+  res <- ifelse(as.integer(x) == 0L, 1 - prob, prob)
+  if (log == TRUE) res <- log(res)
+  return(res)
+}
+
+limit <- function(x) {
+  pmin(pmax(x, 0.0001), 0.9999)
+}
+
+log_prior_sigma <- function(priors, sigma) {
+  dgamma(
+    1 / sigma^2,
+    shape = priors$error$shape,
+    rate = priors$error$rate,
+    log = TRUE
+  )
+}
+
+log_prior_smooth <- function(priors, param_grid, n_obs, n_cleaned) {
+  log_prior <- dbeta(
+    x = limit(param_grid[, "alpha"]),
+    shape1 = priors$level$alpha,
+    shape2 = priors$level$beta,
+    log = TRUE
+  ) +
+    dbeta(
+      x = limit(param_grid[, "alpha"] * param_grid[, "beta"]),
+      shape1 = priors$trend$alpha,
+      shape2 = priors$trend$beta,
+      log = TRUE
+    ) +
+    dbeta(
+      x = limit(param_grid[, "gamma"]),
+      shape1 = priors$seasonality$alpha,
+      shape2 = priors$seasonality$beta,
+      log = TRUE
+    ) +
+    dbernoulli(
+      x = ifelse(abs(param_grid[, "beta"] +
+                       param_grid[, "one_minus_beta"]) < 0.0001, 0, 1),
+      prob = priors$trend$prob,
+      log = TRUE
+    ) +
+    dbernoulli(
+      x = ifelse(abs(param_grid[, "gamma"] +
+                       param_grid[, "one_minus_gamma"]) < 0.0001, 0, 1),
+      prob = priors$seasonality$prob,
+      log = TRUE
+    ) +
+    dbinom(x = n_cleaned, size = n_obs, prob = priors$anomaly$prob, log = TRUE)
+
+  return(log_prior)
+}
+
+fit_sigma <- function(errors,
+                      method = c("norm", "cauchy")[1],
+                      n_obs,
+                      shape = NULL,
+                      rate = NULL) {
+  if (method == "norm") {
+    # https://en.wikipedia.org/wiki/Conjugate_prior
+    # Normal assuming mean is known (at 0)
+
+    sigma_rate <- rate + colSums(errors^2)/2
+    sigma_shape <- shape + n_obs / 2
+
+    sigma <- sqrt(sigma_rate / sigma_shape)
+  } else if (method == "cauchy") {
+    sigma <- apply(X = errors, MARGIN = 2, FUN = IQR) / 2
+  }
+
+  return(sigma)
+}
+
+log_lik_cauchy <- function(errors, sigma) {
+  colSums(
+    dcauchy(
+      x = errors,
+      location = 0,
+      scale = rep(sigma, each = dim(errors)[1]),
+      log = TRUE
+    )
+  )
+}
+
+log_lik_norm <- function(errors, sigma) {
+  colSums(
+    dnorm(
+      x = errors, mean = 0, sd = rep(sigma, each = dim(errors)[1]), log = TRUE
+    )
+  )
+}
