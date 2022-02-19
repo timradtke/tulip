@@ -28,8 +28,11 @@ initialize_states <- function(y,
   y <- c(rep(NA, m), y)
   n_obs <- length(y)
 
-  # the level is initialized as the median of x
-  l <- rep(x[1] - median(y, na.rm = TRUE), n_obs)
+  # Instead of initializing by the first observation, we try to make it a bit
+  # more robust against outliers on observation 1 by using the median over the
+  # first three values; this should be okay-ish even if there are a trend and
+  # seasonal component
+  l <- rep(median(x[1:min(3, n_obs)]) - median(y, na.rm = TRUE), n_obs)
 
   # The trend is initialized as median of the median period-over-period changes;
   # for each i, get the standardized change compared to all other observations.
