@@ -1,11 +1,69 @@
-#' Draw sample paths from a fitted object to forecast
+#' Forecast by drawing sample paths from a fitted object
 #'
+#' Instead of generating a point forecast and marginal forecast intervals based
+#' on a Normal assumption and closed-from equations, we draw observations from
+#' the observation equation. The uncertainty is then represented via samples
+#' from the forecast distribution. This allows us to represent the distribution
+#' over multiple horizons instead of only the marginal distribution at
+#' individual horizons.
+#'
+#' The returned value is a matrix of dimensions `h` times `n`. Each of the `n`
+#' columns represents one sample path and is a random draw from the
+#' `h`-dimensional forecast distribution. See also examples below.
+#'
+#' @param object The fitted model object returned by [fit()].
+#' @param h The forecast horizon as integer number of periods
+#' @param n The integer number of sample paths to draw from the forecast
+#'     distribution
+#' @param switch_to_cauchy_if_outliers If `TRUE`, then if the fitted model uses
+#'     a Normal distribution as likelihood but outliers were detected and
+#'     interpolated during fitting of the smoothing parameters, then the
+#'     forecast distribution can automatically switch to a Cauchy distribution
+#'     from which sample paths are drawn instead. Default is `FALSE`.
+#'
+#' @seealso [fit()]
 #' @export
+#'
+#' @examples
+#' set.seed(4278)
+#'
+#' y <- rt(100, df = 10) * 10 + 1:100
+#' # plot(y, type = "l", col = "grey", xlab = NA)
+#' # points(y, pch = 21, bg = "black", col = "white")
+#'
+#' ls_fit <- fit(y = y, m = 12, family = "norm")
+#'
+#' m_fc <- forecast(object = ls_fit, h = 12, n = 10000)
+#'
+#' # summarize over draws (columns) to get point forecasts
+#' rowMeans(m_fc)
+#'
+#' # marginal quantiles can be derived in much the same way
+#' apply(m_fc, 1, quantile, 0.05)
+#' apply(m_fc, 1, quantile, 0.95)
+#'
+#' # we can also summarize the distribution of the sum over horizons 4 to 6
+#' quantile(colSums(m_fc[4:6, ]), c(0.05, 0.5, 0.95))
+#'
+#' # sample paths carry autocorrelation, the horizons are not independent of
+#' # another; this is revealed when we drop the autocorrelation by shuffling
+#' # at each margin randomly and try to recompute the same quantiles as above:
+#'
+#' m_fc_shuffled <- rbind(
+#'   m_fc[4, sample(x = 1:10000, size = 10000, replace = TRUE), drop = FALSE],
+#'   m_fc[5, sample(x = 1:10000, size = 10000, replace = TRUE), drop = FALSE],
+#'   m_fc[6, sample(x = 1:10000, size = 10000, replace = TRUE), drop = FALSE]
+#' )
+#' quantile(colSums(m_fc_shuffled), c(0.05, 0.5, 0.95))
+#'
+#' # one can also look  directly at the correlation
+#' cor(m_fc[4, ], m_fc[6, ])
+#' cor(m_fc_shuffled[1, ], m_fc_shuffled[3, ])
+#'
 forecast <- function(object,
                      h = 12,
                      n = 10000,
-                     family = NULL,
-                     switch_to_cauchy_if_outliers = TRUE) {
+                     switch_to_cauchy_if_outliers = FALSE) {
 
   checkmate::assert_list(
     x = object, null.ok = TRUE
@@ -21,9 +79,6 @@ forecast <- function(object,
   )
   checkmate::assert_integerish(
     x = n, any.missing = FALSE, null.ok = FALSE, len = 1
-  )
-  checkmate::assert_choice(
-    x = family, choices = c("norm", "cauchy", "nbinom"), null.ok = TRUE
   )
 
   if (isTRUE(object$comment == "no_variance")) {
@@ -44,7 +99,7 @@ forecast <- function(object,
     )
   }
 
-  if (is.null(family)) family <- object$family
+  family <- object$family
 
   if (family == "norm" &&
       switch_to_cauchy_if_outliers &&
@@ -62,6 +117,11 @@ forecast <- function(object,
   } else if (family == "norm") {
     m_e <- matrix(
       rnorm(n = h * n, mean = 0, sd = object$sigma),
+      ncol = n
+    )
+  } else if (family == "student") {
+    m_e <- matrix(
+      rt(n = h * n, df = 5) * object$sigma,
       ncol = n
     )
   }
@@ -141,7 +201,7 @@ forecast <- function(object,
   # drop the placeholders used for initial states
   y_orig <- y_orig[-(1:m), ]
 
-  if (family %in% c("norm", "cauchy")) {
+  if (family %in% c("norm", "cauchy", "student")) {
     y_orig <- y_orig * object$y_mad + object$y_median
   } else if (family == "nbinom") {
     y_orig <- expm1(y_orig)

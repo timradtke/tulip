@@ -7,19 +7,44 @@
 fit(
   y,
   m,
-  family = c("auto", "norm", "cauchy")[1],
+  family = c("auto", "norm", "student", "cauchy")[1],
   init_states = NULL,
   param_grid = NULL,
   priors = NULL,
-  shift_detection = TRUE,
-  window_size = 5,
+  seasonality_threshold = 0.5,
   remove_outliers = TRUE,
   outlier_budget = 5,
   min_obs_for_outlier_sigma = 12,
-  seasonality_threshold = 0.5,
-  verbose = TRUE
+  shift_detection = FALSE,
+  window_size = 5,
+  verbose = FALSE
 )
 }
 \description{
 Fit a robust exponential smoothing model via grid search
+}
+\examples{
+set.seed(4278)
+y <- rt(100, df = 10) * 10 + 1:100
+
+ls_fit <- fit(y = y, m = 12, family = "norm")
+
+print(ls_fit$family)
+print(ls_fit$param_grid)
+
+plot(y, type = "l", col = "grey", xlab = NA)
+points(y, pch = 21, bg = "black", col = "white")
+
+# add fitted values
+lines(ls_fit$y_hat, col = "blue")
+
+# add actuals with interpolated anomalies
+points(ls_fit$x_cleaned * ls_fit$y_mad + ls_fit$y_median,
+       col = "orange", pch = 21)
+
+}
+\seealso{
+\code{\link[=forecast]{forecast()}}, \code{\link[=initialize_states]{initialize_states()}}, \code{\link[=initialize_param_grid]{initialize_param_grid()}},
+\code{\link[=add_prior_level]{add_prior_level()}}, \code{\link[=add_prior_trend]{add_prior_trend()}}, \code{\link[=add_prior_seasonality]{add_prior_seasonality()}},
+\code{\link[=add_prior_error]{add_prior_error()}}, \code{\link[=add_prior_anomaly]{add_prior_anomaly()}}
 }

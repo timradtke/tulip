@@ -74,6 +74,20 @@ fit_map <- function(param_grid,
     l_sigma_cauchy <- log_prior_sigma(priors = priors, sigma = sigma_cauchy)
     l_cauchy <- log_lik_cauchy(errors = errors, sigma = sigma_cauchy)
   }
+  if (family %in% c("student", "auto")) {
+    if (family != "auto") {
+      sigma_norm <- fit_sigma(
+        errors = errors,
+        n_obs = n_obs,
+        method = "norm",
+        shape = priors$error$shape,
+        rate = priors$error$rate
+      )
+    }
+    sigma_student <- fit_sigma(errors = errors, n_obs = n_obs, method = "student")
+    l_sigma_student <- log_prior_sigma(priors = priors, sigma = sigma_norm)
+    l_student <- log_lik_student(errors = errors, sigma = sigma_student, df = 5)
+  }
 
   log_joint <- l_smooth
   idx_wrap <- length(log_joint)
@@ -85,13 +99,17 @@ fit_map <- function(param_grid,
   } else if (family == "cauchy") {
     family_joint <- rep(family, length(log_joint))
     sigma <- sigma_cauchy
-    log_joint <- log_joint + l_sigma_norm + l_norm
+    log_joint <- log_joint + l_sigma_cauchy + l_cauchy
+  } else if (family == "student") {
+    family_joint <- rep(family, length(log_joint))
+    sigma <- sigma_student
+    log_joint <- log_joint + l_sigma_student + l_student
   } else if (family == "auto") {
-    family_joint <- rep(c("norm", "cauchy"), each = length(log_joint))
-    sigma <- c(sigma_norm, sigma_cauchy)
+    family_joint <- rep(c("norm", "cauchy", "student"), each = length(log_joint))
+    sigma <- c(sigma_norm, sigma_cauchy, sigma_student)
     log_joint <- log_joint +
-      c(l_sigma_norm, l_sigma_cauchy) +
-      c(l_norm, l_cauchy)
+      c(l_sigma_norm, l_sigma_cauchy, l_sigma_student) +
+      c(l_norm, l_cauchy, l_student)
   }
 
   return(
@@ -160,7 +178,7 @@ log_prior_smooth <- function(priors, param_grid, n_obs, n_cleaned) {
 }
 
 fit_sigma <- function(errors,
-                      method = c("norm", "cauchy")[1],
+                      method = c("norm", "cauchy", "student")[1],
                       n_obs,
                       shape = NULL,
                       rate = NULL) {
@@ -173,7 +191,10 @@ fit_sigma <- function(errors,
 
     sigma <- sqrt(sigma_rate / sigma_shape)
   } else if (method == "cauchy") {
-    sigma <- apply(X = errors, MARGIN = 2, FUN = IQR) / 2
+    sigma <- apply(X = errors, MARGIN = 2, FUN = stats::IQR) / 2
+  } else if (method == "student") {
+    #sigma <- apply(X = errors, MARGIN = 2, FUN = stats::IQR) / 2
+    sigma <- apply(X = errors, MARGIN = 2, FUN = stats::mad)
   }
 
   return(sigma)
@@ -194,6 +215,22 @@ log_lik_norm <- function(errors, sigma) {
   colSums(
     dnorm(
       x = errors, mean = 0, sd = rep(sigma, each = dim(errors)[1]), log = TRUE
+    )
+  )
+}
+
+log_lik_student <- function(errors, sigma, df) {
+  checkmate::assert_integerish(x = df, lower = 3)
+
+  scaled_errors <- errors / sigma
+  # instead of `sqrt(sigma^2 * (df - 2) / df)` we use `sigma` because we
+  # estimate `sigma` using `mad()` which is already scaled
+
+  colSums(
+    dt(
+      x = scaled_errors,
+      df = df,
+      log = TRUE
     )
   )
 }
