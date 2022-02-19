@@ -38,15 +38,15 @@ A list that includes a list named \code{trend}, which is a list with
 }
 \description{
 The Beta distribution defined via \code{alpha} and \code{beta} is the prior on the
-$\alpha$ and $\beta$ of the estimated model. For example, if we expect that
-the trend component should only update slowly over time and thus only use a
-small part of the error component, then a small \code{alpha} and larger \code{beta}
-make sense.
+\eqn{\alpha} and \eqn{\beta} of the estimated model. For example, if we
+expect that the trend component should only update slowly over time and thus
+only use a small part of the error component, then a small \code{alpha} and larger
+\code{beta} make sense.
 }
 \details{
 Note: The trend component is updated via
-$\alpha \cdot \beta \cdot \epsilon_t$. The prior on $\beta$ is implicitly
-defined via the \code{add_prior_level()} and \code{add_prior_trend()}.
+\eqn{\alpha \cdot \beta \cdot \epsilon_t}. The prior on \eqn{\beta} is
+implicitly defined via the \code{add_prior_level()} and \code{add_prior_trend()}.
 
 The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
 If \code{alpha} is smaller or equal than 1, than the density will be highest at 0.

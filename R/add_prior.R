@@ -24,6 +24,9 @@
 #' print(ps)
 #'
 add_prior_anomaly <- function(prob, priors = NULL) {
+  checkmate::assert_numeric(x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1)
+  checkmate::assert_list(x = priors, null.ok = TRUE)
+
   anomaly <- list(
     prob = prob
   )
@@ -64,6 +67,10 @@ add_prior_anomaly <- function(prob, priors = NULL) {
 #' print(ps)
 #'
 add_prior_error <- function(shape, rate, priors = NULL, verbose = FALSE) {
+
+  checkmate::assert_list(x = priors, null.ok = TRUE)
+  checkmate::assert_logical(x = verbose)
+  # checkmate::assert_logical(x = plot)
 
   if (verbose) {
     tmp_sigma <- sqrt(1 / rgamma(n = 10000L, shape = shape, rate = rate))
@@ -137,9 +144,9 @@ add_prior_seasonality <- function(prob,
                                   verbose = FALSE,
                                   plot = FALSE) {
 
-  checkmate::assert_numeric(x = prob, lower = 0, upper = 1)
-  checkmate::assert_numeric(x = alpha, lower = 0)
-  checkmate::assert_numeric(x = beta, lower = 0)
+  checkmate::assert_numeric(x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(x = alpha, lower = 0.00001, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(x = beta, lower = 0.00001, any.missing = FALSE, len = 1)
   checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_logical(x = verbose)
   checkmate::assert_logical(x = plot)
@@ -186,14 +193,14 @@ add_prior_seasonality <- function(prob,
 #' Add a prior on the local-linear trend component
 #'
 #' The Beta distribution defined via `alpha` and `beta` is the prior on the
-#' $\alpha$ and $\beta$ of the estimated model. For example, if we expect that
-#' the trend component should only update slowly over time and thus only use a
-#' small part of the error component, then a small `alpha` and larger `beta`
-#' make sense.
+#' \eqn{\alpha} and \eqn{\beta} of the estimated model. For example, if we
+#' expect that the trend component should only update slowly over time and thus
+#' only use a small part of the error component, then a small `alpha` and larger
+#' `beta` make sense.
 #'
 #' Note: The trend component is updated via
-#' $\alpha \cdot \beta \cdot \epsilon_t$. The prior on $\beta$ is implicitly
-#' defined via the `add_prior_level()` and `add_prior_trend()`.
+#' \eqn{\alpha \cdot \beta \cdot \epsilon_t}. The prior on \eqn{\beta} is
+#' implicitly defined via the `add_prior_level()` and `add_prior_trend()`.
 #'
 #' The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
 #' If `alpha` is smaller or equal than 1, than the density will be highest at 0.
@@ -231,9 +238,9 @@ add_prior_trend <- function(prob,
                             verbose = FALSE,
                             plot = FALSE) {
 
-  checkmate::assert_numeric(x = prob, lower = 0, upper = 1)
-  checkmate::assert_numeric(x = alpha, lower = 0)
-  checkmate::assert_numeric(x = beta, lower = 0)
+  checkmate::assert_numeric(x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(x = alpha, lower = 0.00001, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(x = beta, lower = 0.00001, any.missing = FALSE, len = 1)
   checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_logical(x = verbose)
   checkmate::assert_logical(x = plot)
@@ -279,7 +286,7 @@ add_prior_trend <- function(prob,
 #' Add a prior on the level component
 #'
 #' The Beta distribution defined via `alpha` and `beta` is the prior on the
-#' $\alpha$ parameter of the estimated model. For example, if we expect that
+#' \eqn{\alpha} parameter of the estimated model. For example, if we expect that
 #' the level of the time series varies slowly over time, and thus only a
 #' small part of the error component is used to update the level at each time
 #' point, then a small `alpha` and larger `beta` make sense.
@@ -291,8 +298,8 @@ add_prior_trend <- function(prob,
 #' The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
 #' If `alpha` is smaller or equal than 1, than the density will be highest at 0.
 #'
-#' Values of $\alpha$ closer to 0 imply a non-fluctating i.i.d. level component,
-#' while values of $\alpha$ closer to 1 imply a more random-walk-like behavior.
+#' Values of `alpha` closer to 0 imply a non-fluctating i.i.d. level component,
+#' while values of `alpha` closer to 1 imply a more random-walk-like behavior.
 #'
 #' @param alpha The `alpha` parameter of a Beta distribution, as `shape1` in
 #'   `dbeta()`. Must be larger than 0.
@@ -313,15 +320,15 @@ add_prior_trend <- function(prob,
 #' @export
 #' @examples
 #' ps <- add_prior_level(
-#'   prob = 0.75, alpha = 1, beta = 7, verbose = TRUE, plot = TRUE
+#'   alpha = 1, beta = 7, verbose = TRUE, plot = TRUE
 #' )
 #'
 #' print(ps)
 #'
 add_prior_level <- function(alpha, beta, priors = NULL, verbose = FALSE, plot = FALSE) {
 
-  checkmate::assert_numeric(x = alpha, lower = 0)
-  checkmate::assert_numeric(x = beta, lower = 0)
+  checkmate::assert_numeric(x = alpha, lower = 0.00001, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(x = beta, lower = 0.00001, any.missing = FALSE, len = 1)
   checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_logical(x = verbose)
   checkmate::assert_logical(x = plot)

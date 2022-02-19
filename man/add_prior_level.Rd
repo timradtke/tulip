@@ -27,7 +27,7 @@ A list that includes a list named \code{level}, which is a list with
 }
 \description{
 The Beta distribution defined via \code{alpha} and \code{beta} is the prior on the
-$\alpha$ parameter of the estimated model. For example, if we expect that
+\eqn{\alpha} parameter of the estimated model. For example, if we expect that
 the level of the time series varies slowly over time, and thus only a
 small part of the error component is used to update the level at each time
 point, then a small \code{alpha} and larger \code{beta} make sense.
@@ -40,12 +40,12 @@ is always used.
 The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
 If \code{alpha} is smaller or equal than 1, than the density will be highest at 0.
 
-Values of $\alpha$ closer to 0 imply a non-fluctating i.i.d. level component,
-while values of $\alpha$ closer to 1 imply a more random-walk-like behavior.
+Values of \code{alpha} closer to 0 imply a non-fluctating i.i.d. level component,
+while values of \code{alpha} closer to 1 imply a more random-walk-like behavior.
 }
 \examples{
 ps <- add_prior_level(
-  prob = 0.75, alpha = 1, beta = 7, verbose = TRUE, plot = TRUE
+  alpha = 1, beta = 7, verbose = TRUE, plot = TRUE
 )
 
 print(ps)
