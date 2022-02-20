@@ -11,7 +11,7 @@
 #' columns represents one sample path and is a random draw from the
 #' `h`-dimensional forecast distribution. See also examples below.
 #'
-#' @param object The fitted model object returned by [fit()].
+#' @param object The fitted model object returned by [heuristika()].
 #' @param h The forecast horizon as integer number of periods
 #' @param n The integer number of sample paths to draw from the forecast
 #'     distribution
@@ -21,7 +21,7 @@
 #'     forecast distribution can automatically switch to a Cauchy distribution
 #'     from which sample paths are drawn instead. Default is `FALSE`.
 #'
-#' @seealso [fit()]
+#' @seealso [heuristika()]
 #' @export
 #'
 #' @examples
@@ -31,9 +31,9 @@
 #' # plot(y, type = "l", col = "grey", xlab = NA)
 #' # points(y, pch = 21, bg = "black", col = "white")
 #'
-#' ls_fit <- fit(y = y, m = 12, family = "norm")
+#' ls_fit <- heuristika(y = y, m = 12, family = "norm")
 #'
-#' m_fc <- forecast(object = ls_fit, h = 12, n = 10000)
+#' m_fc <- draw_paths(object = ls_fit, h = 12, n = 10000)
 #'
 #' # summarize over draws (columns) to get point forecasts
 #' rowMeans(m_fc)
@@ -60,10 +60,10 @@
 #' cor(m_fc[4, ], m_fc[6, ])
 #' cor(m_fc_shuffled[1, ], m_fc_shuffled[3, ])
 #'
-forecast <- function(object,
-                     h = 12,
-                     n = 10000,
-                     switch_to_cauchy_if_outliers = FALSE) {
+draw_paths <- function(object,
+                       h = 12,
+                       n = 10000,
+                       switch_to_cauchy_if_outliers = FALSE) {
 
   checkmate::assert_list(
     x = object, null.ok = TRUE

@@ -1,11 +1,13 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# heuristika 0.0.0.9000
+# heuristika <img src="man/figures/logo.png" align="right" height="139" />
 
 <!-- badges: start -->
 
 <!-- badges: end -->
+
+**Version: 0.0.0.9000**
 
 The goal of heuristika is to provide a computationally and
 outlier-robust implementation of a subset of exponential smoothing-based
@@ -48,19 +50,17 @@ library(heuristika)
 
 y <- rnorm(55, mean = 25 + sinpi(1:55 / 6), sd = 0.5)
 
-fitted_model <- heuristika::fit(y = y, m = 12, family = "auto")
+fitted_model <- heuristika::heuristika(y = y, m = 12, family = "auto")
 ```
 
 <img src="man/figures/README-plot_fit-1.png" width="100%" />
 
 ``` r
-fc <- heuristika::forecast(
+fc <- heuristika::draw_paths(
   object = fitted_model, 
   h = 12, 
   n = 10000
 )
-#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
-#> only the first element will be used
 ```
 
 ``` r
@@ -103,18 +103,16 @@ air_passengers <- log1p(as.numeric(AirPassengers))
 ap_n <- length(air_passengers)
 
 tictoc::tic()
-ap_fit <- heuristika::fit(
+ap_fit <- heuristika::heuristika(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.488 sec elapsed
+#> 1.365 sec elapsed
 
 tictoc::tic()
-ap_fc <- heuristika::forecast(object = ap_fit, h = 12, n = 10000)
-#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
-#> only the first element will be used
+ap_fc <- heuristika::draw_paths(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
-#> 0.148 sec elapsed
+#> 0.174 sec elapsed
 ```
 
 <img src="man/figures/README-airpassengers_plot-1.png" width="100%" />
@@ -126,23 +124,21 @@ deaths <- as.numeric(fdeaths)
 d_n <- length(deaths)
 
 tictoc::tic()
-d_fit <- heuristika::fit(
+d_fit <- heuristika::heuristika(
   y = deaths[1:(d_n-12)], m = 12, family = "norm", 
 )
 tictoc::toc()
-#> 0.484 sec elapsed
+#> 0.423 sec elapsed
 
 tictoc::tic()
-d_fc <- heuristika::forecast(
+d_fc <- heuristika::draw_paths(
   object = d_fit, 
   h = 12, 
   n = 10000,
   switch_to_cauchy_if_outliers = FALSE
 )
-#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
-#> only the first element will be used
 tictoc::toc()
-#> 0.331 sec elapsed
+#> 0.101 sec elapsed
 ```
 
 <img src="man/figures/README-deaths_plot-1.png" width="100%" />
@@ -154,23 +150,21 @@ ukgas <- as.numeric(UKgas)
 ug_n <- length(ukgas)
 
 tictoc::tic()
-ug_fit <- heuristika::fit(
+ug_fit <- heuristika::heuristika(
   y = log1p(ukgas[1:(ug_n-12)]), m = 4, family = "norm", 
 )
 tictoc::toc()
-#> 0.941 sec elapsed
+#> 0.778 sec elapsed
 
 tictoc::tic()
-ug_fc <- heuristika::forecast(
+ug_fc <- heuristika::draw_paths(
   object = ug_fit, 
   h = 12, 
   n = 10000,
   switch_to_cauchy_if_outliers = FALSE
 )
-#> Warning in if (is.na(object$param_grid)) {: the condition has length > 1 and
-#> only the first element will be used
 tictoc::toc()
-#> 0.089 sec elapsed
+#> 0.151 sec elapsed
 ```
 
 <img src="man/figures/README-ukgas_plot-1.png" width="100%" />
@@ -183,7 +177,13 @@ Michael Bohlke-Schneider, Shubham Kapoor, Tim Januschowski (2020).
 
 Ruben Crevits and Christophe Croux (2017). *Forecasting using Robust
 Exponential Smoothing with Damped Trend and Seasonal Components*.
-KBI\_1741, <https://dx.doi.org/10.2139/ssrn.3068634>
+<https://dx.doi.org/10.2139/ssrn.3068634>
+
+Andrew C. Harvey (1990). *Forecasting, Structural Time Series Models and
+the Kalman Filter*. <https://doi.org/10.1017/CBO9781107049994>
+
+C. E. Holt (1957). *Forecasting Seasonals and Trends by Exponentially
+Weighted Averages*. <https://doi.org/10.1016/j.ijforecast.2003.09.015>
 
 Rob J. Hyndman and George Athanasopoulos (2021). *Forecasting:
 Principles and Practice*. 3rd edition, OTexts: Melbourne, Australia.
@@ -194,6 +194,17 @@ Rob J. Hyndman, Anne B. Koehler, Ralph D. Snyder, and Simone Grose
 Exponential Smoothing Methods*.
 <https://doi.org/10.1016/S0169-2070(01)00110-8>
 
+Edwin Ng, Zhishi Wang, Huigang Chen, Steve Yang, Slawek Smyl (2021).
+*Orbit: Probabilistic Forecast with Exponential Smoothing*.
+<https://arxiv.org/abs/2004.08492>
+
 Rafael de Rezende, Katharina Egert, Ignacio Marin, Guilherme Thompson
 (2021). *A White-boxed ISSM Approach to Estimate Uncertainty
 Distributions of Walmart Sales*. <https://arxiv.org/abs/2111.14721>
+
+Steven L. Scott, Hal Varian (2013). *Predicting the Present with
+Bayesian Structural Time Series*.
+<https://research.google/pubs/pub41335>
+
+P. R. Winters (1960). *Forecasting Sales by Exponentially Weighted
+Moving Averages*. <https://doi.org/10.1287/mnsc.6.3.324>

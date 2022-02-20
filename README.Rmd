@@ -19,10 +19,12 @@ version <- description[grepl(pattern = "^Version:", x = description)]
 version <- substr(version, nchar("Version: ") + 1, nchar(version))
 ```
 
-# heuristika `r version`
+# heuristika <img src="man/figures/logo.png" align="right" height="139" />
 
 <!-- badges: start -->
 <!-- badges: end -->
+
+**Version: `r version`**
 
 The goal of heuristika is to provide a computationally and outlier-robust implementation of a subset of exponential smoothing-based models that allows for manual overwrites.
 
@@ -57,7 +59,7 @@ library(heuristika)
 
 y <- rnorm(55, mean = 25 + sinpi(1:55 / 6), sd = 0.5)
 
-fitted_model <- heuristika::fit(y = y, m = 12, family = "auto")
+fitted_model <- heuristika::heuristika(y = y, m = 12, family = "auto")
 ```
 
 ```{r plot_fit, echo = FALSE}
@@ -70,7 +72,7 @@ lines(fitted_model$x_cleaned, col = rgb(red = 0, green = 0, blue = 1))
 ```
 
 ```{r}
-fc <- heuristika::forecast(
+fc <- heuristika::draw_paths(
   object = fitted_model, 
   h = 12, 
   n = 10000
@@ -113,13 +115,13 @@ air_passengers <- log1p(as.numeric(AirPassengers))
 ap_n <- length(air_passengers)
 
 tictoc::tic()
-ap_fit <- heuristika::fit(
+ap_fit <- heuristika::heuristika(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
 
 tictoc::tic()
-ap_fc <- heuristika::forecast(object = ap_fit, h = 12, n = 10000)
+ap_fc <- heuristika::draw_paths(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
 ```
 
@@ -145,13 +147,13 @@ deaths <- as.numeric(fdeaths)
 d_n <- length(deaths)
 
 tictoc::tic()
-d_fit <- heuristika::fit(
+d_fit <- heuristika::heuristika(
   y = deaths[1:(d_n-12)], m = 12, family = "norm", 
 )
 tictoc::toc()
 
 tictoc::tic()
-d_fc <- heuristika::forecast(
+d_fc <- heuristika::draw_paths(
   object = d_fit, 
   h = 12, 
   n = 10000,
@@ -182,13 +184,13 @@ ukgas <- as.numeric(UKgas)
 ug_n <- length(ukgas)
 
 tictoc::tic()
-ug_fit <- heuristika::fit(
+ug_fit <- heuristika::heuristika(
   y = log1p(ukgas[1:(ug_n-12)]), m = 4, family = "norm", 
 )
 tictoc::toc()
 
 tictoc::tic()
-ug_fc <- heuristika::forecast(
+ug_fc <- heuristika::draw_paths(
   object = ug_fit, 
   h = 12, 
   n = 10000,
@@ -216,10 +218,20 @@ points(ukgas, pch = 19, col = "black", cex = 0.5)
 
 Michael Bohlke-Schneider, Shubham Kapoor, Tim Januschowski (2020). *Resilient Neural Forecasting Systems*. https://www.amazon.science/publications/resilient-neural-forecasting-systems
 
-Ruben Crevits and Christophe Croux (2017). *Forecasting using Robust Exponential Smoothing with Damped Trend and Seasonal Components*. KBI_1741, https://dx.doi.org/10.2139/ssrn.3068634
+Ruben Crevits and Christophe Croux (2017). *Forecasting using Robust Exponential Smoothing with Damped Trend and Seasonal Components*. https://dx.doi.org/10.2139/ssrn.3068634
+
+Andrew C. Harvey (1990). *Forecasting, Structural Time Series Models and the Kalman Filter*. https://doi.org/10.1017/CBO9781107049994
+
+C. E. Holt (1957). *Forecasting Seasonals and Trends by Exponentially Weighted Averages*. https://doi.org/10.1016/j.ijforecast.2003.09.015
 
 Rob J. Hyndman and George Athanasopoulos (2021). *Forecasting: Principles and Practice*. 3rd edition, OTexts: Melbourne, Australia. https://otexts.com/fpp3/
 
 Rob J. Hyndman, Anne B. Koehler, Ralph D. Snyder, and Simone Grose (2002). *A State Space Framework for Automatic Forecasting using Exponential Smoothing Methods*. https://doi.org/10.1016/S0169-2070(01)00110-8
 
+Edwin Ng, Zhishi Wang, Huigang Chen, Steve Yang, Slawek Smyl (2021). *Orbit: Probabilistic Forecast with Exponential Smoothing*. https://arxiv.org/abs/2004.08492
+
 Rafael de Rezende, Katharina Egert, Ignacio Marin, Guilherme Thompson (2021). *A White-boxed ISSM Approach to Estimate Uncertainty Distributions of Walmart Sales*. https://arxiv.org/abs/2111.14721
+
+Steven L. Scott, Hal Varian (2013). *Predicting the Present with Bayesian Structural Time Series*. https://research.google/pubs/pub41335
+
+P. R. Winters (1960). *Forecasting Sales by Exponentially Weighted Moving Averages*. https://doi.org/10.1287/mnsc.6.3.324

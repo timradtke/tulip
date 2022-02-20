@@ -1,6 +1,6 @@
 #' Fit a robust exponential smoothing model via grid search
 #'
-#' @seealso [forecast()], [initialize_states()], [initialize_param_grid()],
+#' @seealso [draw_paths()], [initialize_states()], [initialize_param_grid()],
 #'     [add_prior_level()], [add_prior_trend()], [add_prior_seasonality()],
 #'     [add_prior_error()], [add_prior_anomaly()]
 #'
@@ -9,7 +9,7 @@
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
-#' ls_fit <- fit(y = y, m = 12, family = "norm")
+#' ls_fit <- heuristika(y = y, m = 12, family = "norm")
 #'
 #' print(ls_fit$family)
 #' print(ls_fit$param_grid)
@@ -24,7 +24,7 @@
 #' points(ls_fit$x_cleaned * ls_fit$y_mad + ls_fit$y_median,
 #'        col = "orange", pch = 21)
 #'
-fit <- function(y,
+heuristika <- function(y,
                 m,
                 family = c("auto", "norm", "student", "cauchy")[1],
                 init_states = NULL,
@@ -63,15 +63,15 @@ fit <- function(y,
 
   if (length(y) == 1) {
     warning("The length of the provided `y` is 1. Returning `y` as forecast.")
-    return(default_fit_object(y = y, y_hat = y, m = m, comment = "single_obs"))
+    return(default_object(y = y, y_hat = y, m = m, comment = "single_obs"))
   }
   if (isTRUE(y_mad < 0.0001)) {
     warning("The MAD of y is 0, the series is 0 for most observations. You might want to forecast it differently.")
-    return(default_fit_object(y = y, y_hat = 0, m = m, comment = "mad_zero"))
+    return(default_object(y = y, y_hat = 0, m = m, comment = "mad_zero"))
   }
   if (isTRUE(sd(y) < 0.0001)) {
     warning("The provided `y` does not vary. Using `unique(y)` as forecast.")
-    return(default_fit_object(y = y, y_hat = y, m = m, comment = "no_variance"))
+    return(default_object(y = y, y_hat = y, m = m, comment = "no_variance"))
   }
 
 
@@ -193,7 +193,7 @@ fit <- function(y,
   )
 }
 
-default_fit_object <- function(y, y_hat, m, comment) {
+default_object <- function(y, y_hat, m, comment) {
   param_grid <- matrix(NA, ncol = 6, nrow = 1)
   colnames(param_grid) <- c(
     "alpha", "one_minus_alpha", "beta", "one_minus_beta", "gamma",
