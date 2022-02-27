@@ -25,32 +25,46 @@
 #'        col = "orange", pch = 21)
 #'
 heuristika <- function(y,
-                m,
-                family = c("auto", "norm", "student", "cauchy")[1],
-                init_states = NULL,
-                param_grid = NULL,
-                priors = NULL,
-                seasonality_threshold = 0.5,
-                remove_outliers = TRUE,
-                outlier_budget = 5,
-                min_obs_for_outlier_sigma = 12,
-                shift_detection = FALSE,
-                window_size = 5,
-                verbose = FALSE) {
+                       m,
+                       family = c("auto", "norm", "student", "cauchy")[1],
+                       param_grid = NULL,
+                       priors = NULL,
+                       init_states = NULL,
+                       seasonality_threshold = 0.5,
+                       remove_anomalies = TRUE,
+                       anomaly_budget = 5,
+                       min_obs_anomaly_removal = 12) {
 
   checkmate::assert_numeric(x = y, any.missing = FALSE)
   checkmate::assert_integerish(
-    x = m, any.missing = FALSE, null.ok = FALSE, len = 1
+    x = m, any.missing = FALSE, null.ok = FALSE, len = 1, lower = 1
   )
   checkmate::assert_choice(
-    x = family, choices = c("norm", "cauchy", "student", "auto"), null.ok = FALSE
+    x = family, choices = c("norm", "cauchy", "student", "auto"),
+    null.ok = FALSE
   )
+  checkmate::assert_matrix(
+    x = param_grid,
+    any.missing = FALSE, min.rows = 1, min.cols = 6,
+    max.cols = 6, null.ok = TRUE
+  )
+  checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_list(
     x = init_states, types = c("numeric"), any.missing = FALSE, null.ok = TRUE
   )
-  checkmate::assert_matrix(
-    x = param_grid, any.missing = FALSE, min.rows = 1, min.cols = 6,
-    max.cols = 6, null.ok = TRUE
+  checkmate::assert_numeric(
+    x = seasonality_threshold, lower = 0, upper = 1, len = 1,
+    any.missing = FALSE, null.ok = FALSE
+  )
+  checkmate::assert_logical(
+    x = remove_anomalies, len = 1, any.missing = FALSE, null.ok = FALSE
+  )
+  checkmate::assert_integerish(
+    x = anomaly_budget, lower = 0, len = 1, any.missing = FALSE, null.ok = FALSE
+  )
+  checkmate::assert_integerish(
+    x = min_obs_anomaly_removal, lower = 2, len = 1, any.missing = FALSE,
+    null.ok = FALSE
   )
 
   x <- y
@@ -65,15 +79,15 @@ heuristika <- function(y,
     warning("The length of the provided `y` is 1. Returning `y` as forecast.")
     return(default_object(y = y, y_hat = y, m = m, comment = "single_obs"))
   }
-  if (isTRUE(y_mad < 0.0001)) {
-    warning("The MAD of y is 0, the series is 0 for most observations. You might want to forecast it differently.")
-    return(default_object(y = y, y_hat = 0, m = m, comment = "mad_zero"))
-  }
   if (isTRUE(sd(y) < 0.0001)) {
     warning("The provided `y` does not vary. Using `unique(y)` as forecast.")
     return(default_object(y = y, y_hat = y, m = m, comment = "no_variance"))
   }
-
+  if (isTRUE(y_mad < 0.0001)) {
+    warning("The MAD of y is 0, the series is constant for most observations. You might want to forecast it differently.") # no lint
+    return(default_object(y = y, y_hat = rep(y_median, n_y), m = m,
+                          comment = "mad_zero"))
+  }
 
   y <- (y - y_median) / y_mad
 
@@ -81,8 +95,8 @@ heuristika <- function(y,
     init_states <- initialize_states(
       y = y,
       m = m,
-      shift_detection = shift_detection,
-      window_size = window_size,
+      shift_detection = FALSE, # hardcoded until no longer experimental
+      window_size = 5, # hardcoded until no longer experimental
       seasonality_threshold = seasonality_threshold
     )
   } else {
@@ -100,7 +114,13 @@ heuristika <- function(y,
       must.include = c("alpha", "beta", "gamma", "one_minus_alpha",
                        "one_minus_beta", "one_minus_gamma")
     )
-    checkmate::assert_true(all((rowSums(param_grid) - 6) < 0.001))
+
+    # ensure the expected order of columns, just in case
+    param_grid <- param_grid[, c("alpha", "one_minus_alpha",
+                                 "beta", "one_minus_beta",
+                                 "gamma", "one_minus_gamma")]
+    checkmate::assert_true(all((rowSums(param_grid) - 3) < 0.001))
+    checkmate::assert_true(all(param_grid <= 1 & param_grid >= 0))
   }
 
   if (is.null(priors)) {
@@ -125,9 +145,9 @@ heuristika <- function(y,
     m = m,
     init_states = init_states,
     param_grid = param_grid,
-    remove_outliers = remove_outliers,
-    outlier_budget = outlier_budget,
-    min_obs_for_outlier_sigma = min_obs_for_outlier_sigma
+    remove_anomalies = remove_anomalies,
+    anomaly_budget = anomaly_budget,
+    min_obs_anomaly_removal = min_obs_anomaly_removal
   )
 
   fitted_map <- fit_map(
@@ -150,47 +170,47 @@ heuristika <- function(y,
   # back-transform the fitted values
   x_hat <- fitted_states$y_hat[, opt_idx_wrapped] * y_mad + y_median
 
-  return(
-    list(
-      y_hat = x_hat,
-      y = x,
-      x = y,
-      x_hat = fitted_states$y_hat[, opt_idx_wrapped],
-      x_cleaned = fitted_states$y_cleaned[, opt_idx_wrapped],
-      n_cleaned = fitted_states$n_cleaned[opt_idx_wrapped],
-      x_na = fitted_states$y_na[, opt_idx_wrapped],
-      param_grid = param_grid[opt_idx_wrapped, ],
-      sigma = fitted_map$sigma[opt_idx],
-      l = fitted_states$l[, opt_idx_wrapped],
-      b = fitted_states$b[, opt_idx_wrapped],
-      s = fitted_states$s[, opt_idx_wrapped],
-      l_init = fitted_states$l_init[, opt_idx_wrapped],
-      b_init = fitted_states$b_init[, opt_idx_wrapped],
-      s_init = fitted_states$s_init[, opt_idx_wrapped],
-      shift_range = init_states$shift_range,
-      y_median = y_median,
-      y_mad = y_mad,
-      log_joint = fitted_map$log_joint[opt_idx],
-      family = fitted_map$family[opt_idx],
-      m = m,
-      comment = NA,
-      full = list(
-        param_grid = param_grid,
-        log_joint = fitted_map$log_joint,
-        family = fitted_map$family,
-        sigma = fitted_map$sigma,
-        l = fitted_states$l,
-        b = fitted_states$b,
-        s = fitted_states$s,
-        l_init = fitted_states$l_init,
-        b_init = fitted_states$b_init,
-        s_init = fitted_states$s_init,
-        x_hat = fitted_states$y_hat,
-        x_cleaned = fitted_states$y_cleaned,
-        n_cleaned = fitted_states$n_cleaned
-      )
+  fitted_model <- list(
+    y_hat = x_hat,
+    y = x,
+    x = y,
+    x_hat = fitted_states$y_hat[, opt_idx_wrapped],
+    x_cleaned = fitted_states$y_cleaned[, opt_idx_wrapped],
+    n_cleaned = fitted_states$n_cleaned[opt_idx_wrapped],
+    x_na = fitted_states$y_na[, opt_idx_wrapped],
+    param_grid = param_grid[opt_idx_wrapped, ],
+    sigma = fitted_map$sigma[opt_idx],
+    l = fitted_states$l[, opt_idx_wrapped],
+    b = fitted_states$b[, opt_idx_wrapped],
+    s = fitted_states$s[, opt_idx_wrapped],
+    l_init = fitted_states$l_init[, opt_idx_wrapped],
+    b_init = fitted_states$b_init[, opt_idx_wrapped],
+    s_init = fitted_states$s_init[, opt_idx_wrapped],
+    shift_range = init_states$shift_range,
+    y_median = y_median,
+    y_mad = y_mad,
+    log_joint = fitted_map$log_joint[opt_idx],
+    family = fitted_map$family[opt_idx],
+    m = m,
+    comment = NA,
+    full = list(
+      param_grid = param_grid,
+      log_joint = fitted_map$log_joint,
+      family = fitted_map$family,
+      sigma = fitted_map$sigma,
+      l = fitted_states$l,
+      b = fitted_states$b,
+      s = fitted_states$s,
+      l_init = fitted_states$l_init,
+      b_init = fitted_states$b_init,
+      s_init = fitted_states$s_init,
+      x_hat = fitted_states$y_hat,
+      x_cleaned = fitted_states$y_cleaned,
+      n_cleaned = fitted_states$n_cleaned
     )
   )
+
+  return(fitted_model)
 }
 
 default_object <- function(y, y_hat, m, comment) {

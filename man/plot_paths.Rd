@@ -21,7 +21,7 @@ x-axis for forecast paths}
 \item{n}{Number of paths to add to plot, a small number is recommended to be
 able to see the individual paths; scalar integer between 1 and 10}
 
-\item{alpha}{The transparency parameter used when addint the paths to the
+\item{alpha}{The transparency parameter used when adding the paths to the
 plot, provided to \code{\link[ggplot2:geom_point]{ggplot2::geom_point()}} and \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}}
 }
 \description{

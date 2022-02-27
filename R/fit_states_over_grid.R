@@ -10,9 +10,9 @@ fit_states_over_grid <- function(y,
                                  m,
                                  init_states,
                                  param_grid,
-                                 remove_outliers,
-                                 outlier_budget,
-                                 min_obs_for_outlier_sigma = 10) {
+                                 remove_anomalies,
+                                 anomaly_budget,
+                                 min_obs_anomaly_removal) {
 
   n <- length(y)
   k <- dim(param_grid)[1] # number of parameter combinations to trial
@@ -38,16 +38,16 @@ fit_states_over_grid <- function(y,
 
   y_orig <- y
   y_na <- y
-  outlier_budget <- rep(outlier_budget, k)
+  anomaly_budget <- rep(anomaly_budget, k)
 
   for (i in (m + 1):(m + n)) {
     y_hat[i, ] <- l[i-1, ] + b[i-1, ] + s[i-m, ]
 
     ############################################################################
 
-    if (remove_outliers &&
-        i > (m + min_obs_for_outlier_sigma) &&
-        any(outlier_budget > 0)) {
+    if (remove_anomalies &&
+        i > (m + min_obs_anomaly_removal) &&
+        any(anomaly_budget > 0)) {
       # overwrite actuals in case of outliers given errors so far;
       # start only when there are some errors available to compute the variance
       tmp_sigma <- sqrt(
@@ -57,19 +57,19 @@ fit_states_over_grid <- function(y,
                      y_na[1:(i-1), , drop = FALSE], na.rm = TRUE)^2
       )
 
-      is_outlier <- pnorm(
+      is_anomaly <- pnorm(
         q = abs(as.numeric(y_hat[i,] - y[i,])),
         mean = 0,
         sd = tmp_sigma
       ) > 0.99
 
-      outlier_budget <- outlier_budget - is_outlier
+      anomaly_budget <- anomaly_budget - is_anomaly
 
       # use `y_hat` instead of `y` to continue update of parameters
-      y[i,] <- ifelse(is_outlier & outlier_budget > 0, y_hat[i,], y[i,])
+      y[i,] <- ifelse(is_anomaly & anomaly_budget > 0, y_hat[i,], y[i,])
       # use `NA` instead of `y` to continue update of `tmp_sigma` next round
       # (we can't use `y_hat` because this will make `tmp_sigma` converge to 0)
-      y_na[i,] <- ifelse(is_outlier & outlier_budget > 0, NA, y[i,])
+      y_na[i,] <- ifelse(is_anomaly & anomaly_budget > 0, NA, y[i,])
     }
 
     ############################################################################

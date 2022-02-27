@@ -9,9 +9,9 @@ fit_states_over_grid(
   m,
   init_states,
   param_grid,
-  remove_outliers,
-  outlier_budget,
-  min_obs_for_outlier_sigma = 10
+  remove_anomalies,
+  anomaly_budget,
+  min_obs_anomaly_removal
 )
 }
 \arguments{

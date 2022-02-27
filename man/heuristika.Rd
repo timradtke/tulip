@@ -8,16 +8,13 @@ heuristika(
   y,
   m,
   family = c("auto", "norm", "student", "cauchy")[1],
-  init_states = NULL,
   param_grid = NULL,
   priors = NULL,
+  init_states = NULL,
   seasonality_threshold = 0.5,
-  remove_outliers = TRUE,
-  outlier_budget = 5,
-  min_obs_for_outlier_sigma = 12,
-  shift_detection = FALSE,
-  window_size = 5,
-  verbose = FALSE
+  remove_anomalies = TRUE,
+  anomaly_budget = 5,
+  min_obs_anomaly_removal = 12
 )
 }
 \description{
