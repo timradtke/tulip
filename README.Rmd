@@ -52,60 +52,102 @@ devtools::install_github("timradtke/heuristika")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+Let's first create some example data:
+
+```{r}
+set.seed(512)
+
+n <- 56
+h <- 12
+
+start_date <- as.Date(paste0(format(Sys.Date(), "%Y-%m"), "-01"))
+dates <- seq(
+  lubridate::`%m-%`(start_date, months(n-1)), 
+  start_date, 
+  by = "month"
+)
+dates_future <- seq(
+  lubridate::`%m+%`(start_date, months(1)), 
+  lubridate::`%m+%`(start_date, months(h)),
+  by = "month"
+)
+```
+
+```{r}
+tmp_trend <- log(1:n) * 100
+tmp_season <- sinpi(1:n / 6) * 50
+
+y <- rep(NA, n)
+for (i in 1:n) {
+  y[i] <- 0.4 * rt(n = 1, df = 2) * 50
+  if (i > 1) y[i] <- 0.6 * y[i-1] + y[i]
+}
+y <- y + tmp_trend + tmp_season
+```
+
+### Training a `heuristika` model
+
+A `heuristika` model can be fit against the series by additionally specifying the expected period length `m` of the seasonal component.
 
 ```{r example}
 library(heuristika)
 
-y <- rnorm(55, mean = 25 + sinpi(1:55 / 6), sd = 0.5)
-
 fitted_model <- heuristika::heuristika(y = y, m = 12, family = "auto")
 ```
 
-```{r plot_fit, echo = FALSE}
-plot(x = 1:67, y = c(y, rep(NA, 12)), pch = 19, 
-     ylim = c(min(y)*0.95, max(y)*1.05),
-     xlab = NA, ylab = NA)
-lines(1:67, c(y, rep(NA, 12)))
-lines(fitted_model$y_hat, col = rgb(red = 0, green = 0, blue = 1))
-lines(fitted_model$x_cleaned, col = rgb(red = 0, green = 0, blue = 1))
+We don't import `ggplot2` by default, but if it is made available one can use its `autoplot` generic to visualize the fitted model as `heuristika` provides methods for its classes.
+
+By default, `autoplot()` will show the fitted model's components on the internal standardized scale:
+
+```{r autoplot_fitted_values}
+library(ggplot2)
+autoplot(fitted_model)
 ```
 
-```{r}
-fc <- heuristika::draw_paths(
-  object = fitted_model, 
-  h = 12, 
-  n = 10000
-)
+Note that the scale of the components can be quite different, which becomes clear when we fix the y-axis scale across components:
+
+```{r autoplot_fitted_components_fixed}
+autoplot(fitted_model, scales = "fixed")
 ```
 
-```{r plot_sample_paths}
-plot(x = 1:67, y = c(y, rep(NA, 12)), pch = 19, 
-     ylim = c(min(y)*0.95, max(y)*1.05),
-     xlab = NA, ylab = NA)
-lines(1:67, c(y, rep(NA, 12)))
+Alternatively, one can also display the fitted values against the input time series:
 
-for (j in 1:5) {
-  lines(56:67, fc[, j], col = j + 1)
-}
+```{r autoplot_fitted_fitted}
+autoplot(fitted_model, method = "fitted", date = dates)
 ```
 
-```{r plot_quantiles}
-quantiles <- c(0.01, 0.05, 0.13, 0.5, 0.87, 0.95, 0.99)
+### Forecasting with `heuristika`
 
-plot(x = 1:67, y = c(y, rep(NA, 12)), pch = 19, 
-     ylim = c(min(y)*0.95, max(y)*1.05),
-     xlab = NA, ylab = NA)
-lines(x = 1:67, y = c(y, rep(NA, 12)))
-for (j in seq_along(quantiles)) {
-  lines(
-    x = 56:67, 
-    y = apply(fc, quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
-    col = rgb(red = 0, green = 0, blue = 1, 
-              alpha = 1 - abs(0.5 - quantiles[j])),
-    lwd = 1 - abs(0.5 - quantiles[j])
-    )
-}
+Just use `predict()` on the fitted model to generate sample paths from the forecast distribution:
+
+```{r predict_heuristika}
+forecast <- predict(object = fitted_model, h = 12, n = 10000)
+```
+
+The returned `forecast` object has it's own `heuristika_paths` class which can again be plotted using `autoplot()`:
+
+```{r autoplot_forecast_forecast}
+autoplot(forecast, date = dates, date_future = dates_future)
+```
+
+Special about `heuristika` is that sample paths from the joint forecast distribution are the native output of `heuristika`s predict method--in contrast to, for example, the usual point forecasts or pre-aggregated quantiles.
+
+They can be accessed via the `paths` matrix of dimensions `h` by `n`: 
+
+```{r dim_paths}
+dim(forecast$paths)
+```
+
+These are the five first forecast paths:
+
+```{r print_paths}
+round(forecast$paths[, 1:5], 1)
+```
+
+A random sample of five forecast paths can be plotted by choosing the `method = "paths"`:
+
+```{r autoplot_forecast_paths}
+autoplot(forecast, method = "paths", date = dates, date_future = dates_future)
 ```
 
 ## AirPassengers
@@ -115,103 +157,29 @@ air_passengers <- log1p(as.numeric(AirPassengers))
 ap_n <- length(air_passengers)
 
 tictoc::tic()
-ap_fit <- heuristika::heuristika(
+ap_fit <- heuristika(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
 
 tictoc::tic()
-ap_fc <- heuristika::draw_paths(object = ap_fit, h = 12, n = 10000)
+ap_fc <- predict(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
+
+ap_fc$paths <- expm1(ap_fc$paths)
+ap_fc$model$y <- expm1(ap_fc$model$y)
 ```
 
 ```{r airpassengers_plot, echo = FALSE}
-plot(expm1(air_passengers), xlim = c(80, ap_n), ylim = c(0, 800), col = "white")
-lines(expm1(ap_fit$y_hat), col = "blue")
-for (j in seq_along(quantiles)) {
-  lines(
-    x = (ap_n-12+1):ap_n, 
-    y = apply(expm1(ap_fc), quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
-    col = rgb(red = 0, green = 0, blue = 1, 
-              alpha = 1 - abs(0.5 - quantiles[j])),
-    lwd = 1 - abs(0.5 - quantiles[j])
-  )
-}
-points(expm1(air_passengers), pch = 19, col = "black", cex = 0.5)
-```
-
-## deaths
-
-```{r deaths}
-deaths <- as.numeric(fdeaths)
-d_n <- length(deaths)
-
-tictoc::tic()
-d_fit <- heuristika::heuristika(
-  y = deaths[1:(d_n-12)], m = 12, family = "norm", 
+df_ap_future <- data.frame(
+  date = (ap_n-11):ap_n,
+  value = expm1(air_passengers[(ap_n-11):ap_n])
 )
-tictoc::toc()
 
-tictoc::tic()
-d_fc <- heuristika::draw_paths(
-  object = d_fit, 
-  h = 12, 
-  n = 10000,
-  switch_to_cauchy_if_outliers = FALSE
-)
-tictoc::toc()
-```
-
-```{r deaths_plot, echo = FALSE}
-plot(deaths, ylim = c(0, 1500), col = "white")
-lines(d_fit$y_hat, col = "blue")
-for (j in seq_along(quantiles)) {
-  lines(
-    x = (d_n-12+1):d_n, 
-    y = apply(d_fc, quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
-    col = rgb(red = 0, green = 0, blue = 1, 
-              alpha = 1 - abs(0.5 - quantiles[j])),
-    lwd = 1 - abs(0.5 - quantiles[j])
-  )
-}
-points(deaths, pch = 19, col = "black", cex = 0.5)
-```
-
-## UKgas
-
-```{r ukgas}
-ukgas <- as.numeric(UKgas)
-ug_n <- length(ukgas)
-
-tictoc::tic()
-ug_fit <- heuristika::heuristika(
-  y = log1p(ukgas[1:(ug_n-12)]), m = 4, family = "norm", 
-)
-tictoc::toc()
-
-tictoc::tic()
-ug_fc <- heuristika::draw_paths(
-  object = ug_fit, 
-  h = 12, 
-  n = 10000,
-  switch_to_cauchy_if_outliers = FALSE
-)
-tictoc::toc()
-```
-
-```{r ukgas_plot, echo = FALSE}
-plot(ukgas, ylim = c(0, 1500), col = "white")
-lines(expm1(ug_fit$y_hat), col = "blue")
-for (j in seq_along(quantiles)) {
-  lines(
-    x = (ug_n-12+1):ug_n, 
-    y = apply(expm1(ug_fc), quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
-    col = rgb(red = 0, green = 0, blue = 1, 
-              alpha = 1 - abs(0.5 - quantiles[j])),
-    lwd = 1 - abs(0.5 - quantiles[j])
-  )
-}
-points(ukgas, pch = 19, col = "black", cex = 0.5)
+autoplot(ap_fc) +
+  geom_point(aes(x = date, y = value),
+             data = df_ap_future, pch = 21, 
+             color = "white", fill = "darkorange")
 ```
 
 ## References

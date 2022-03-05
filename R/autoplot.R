@@ -1,3 +1,125 @@
+#' Autoplot method for `heuristika` objects
+#'
+#' Use `ggplot2` to visualize the components or fitted values of a fitted model
+#' of class `heuristika`
+#'
+#' @param object Fitted model object of class `heuristika` returned by
+#'     [heuristika()]
+#' @param ... ignored
+#' @param method One of `components` for visualization of the level, trend, seasonal,
+#'     and error components of the fitted model (default), or `fitted` to
+#'     visualize the fitted values in comparison to the input series
+#' @param date Optional additional vector with dates in format that can be cast
+#'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
+#' @param scales One of `free` or `fixed`, passed to the `scales` argument of
+#'     [ggplot2::facet_grid()]; used when `method` is `"components"`
+#' @param show_anomalies Logical; when `TRUE` (default), observations that were
+#'     treated as anomalies during model fit will be marked in orange; used when
+#'     `method` is `"fitted"`
+#' @param show_params Logical; if `TRUE` (default) then fitted params will be
+#'     displayed using [ggplot2::facet_wrap()]; used when `method` is `"fitted"`
+#'
+#' @examples
+#' set.seed(4278)
+#' y <- rt(100, df = 10) * 10 + 1:100
+#'
+#' fitted <- heuristika(y = y, m = 12, family = "norm")
+#'
+#' if (requireNamespace("ggplot2")) {
+#'   autoplot(object = fitted, method = "components")
+#'   autoplot(object = fitted, method = "fitted")
+#' }
+#'
+autoplot.heuristika <- function(object,
+                                ...,
+                                method = c("components", "fitted")[1],
+                                date = NULL,
+                                scales = c("free", "fixed")[1],
+                                show_anomalies = TRUE,
+                                show_params = TRUE) {
+  checkmate::assert_choice(
+    x = method,
+    choices = c("components", "fitted"),
+    null.ok = FALSE
+  )
+
+  if (method == "components") {
+    plot_components(
+      object = object,
+      date = date,
+      scales = scales
+    )
+  } else {
+    plot_fitted(
+      object = object,
+      date = date,
+      show_anomalies = show_anomalies,
+      show_params = show_params
+    )
+  }
+}
+
+#' Autoplot method for `heuristika_paths` objects
+#'
+#' Use `ggplot2` to visualize the marginal forecast quantiles, or a few sample
+#' paths of a heuristika forecast object of class `heuristika_paths`
+#'
+#' Note: This function will use [base::sample()] to randomly select paths that
+#' are added to the plot. Set a seed if you require reproducibility.
+#'
+#' @param object An object of class `heuristika_paths` as returned by
+#'     `[predict.heuristika()]`
+#' @param ... ignored
+#' @param method One of `forecast` for visualization of quantiles of the
+#'     marginal forecast distribution (i.e., the usual fanchart), or `paths` to
+#'     visualize a few sample paths from the joint forecast distribution
+#' @param date Optional additional vector with dates in format that can be cast
+#'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
+#' @param date_future Optional additional vector with dates in format that can
+#'     be cast to `YYYY-MM-DD` with same length as `object$y`, used to create
+#'     x-axis for forecast path
+#' @param show_params Logical; if `TRUE` (default) then fitted params will be
+#'     displayed using [ggplot2::facet_wrap()]; used when `method` is
+#'     `"forecast"`
+#' @param n Number of paths to add to plot, a small number is recommended to be
+#'    able to see the individual paths; scalar integer between 1 and 10; used
+#'    when `method` is `"paths"`
+#' @param alpha The transparency parameter used when adding the paths to the
+#'    plot, provided to [ggplot2::geom_point()] and [ggplot2::geom_line()]; used
+#'    when `method` is `"paths"`
+#'
+autoplot.heuristika_paths <- function(object,
+                                      ...,
+                                      method = c("forecast", "paths")[1],
+                                      date = NULL,
+                                      date_future = NULL,
+                                      show_params = TRUE,
+                                      n = 5,
+                                      alpha = 0.75) {
+  checkmate::assert_choice(
+    x = method,
+    choices = c("forecast", "paths"),
+    null.ok = FALSE
+  )
+
+  if (method == "forecast") {
+    plot_forecast(
+      object,
+      date = date,
+      date_future = date_future,
+      show_params = show_params
+    )
+  } else {
+    plot_paths(
+      object = object,
+      date = date,
+      date_future = date_future,
+      n = n,
+      alpha = alpha
+    )
+  }
+}
+
 #' Plot fitted values of an `heuristika` model
 #'
 #' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
@@ -12,7 +134,6 @@
 #' @param show_params Logical; if `TRUE` (default) then fitted params will be
 #'     displayed using [ggplot2::facet_wrap()]
 #'
-#' @export
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
@@ -116,7 +237,6 @@ plot_fitted <- function(object,
 #' @param scales One of `free` or `fixed`, passed to the `scales` argument of
 #'     [ggplot2::facet_grid()]
 #'
-#' @export
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
@@ -225,8 +345,8 @@ plot_components <- function(object,
 #' Note: This function will use [base::sample()] to randomly select paths that
 #' are added to the plot. Set a seed if you require reproducibility.
 #'
-#' @param object Fitted model object returned by [heuristika()]
-#' @param paths Matrix containing forecast paths as returned by [draw_paths()]
+#' @param object An object of class `heuristika_paths` as returned by
+#'     `predict.heuristika()`
 #' @param date Optional additional vector with dates in format that can be cast
 #'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
 #' @param date_future Optional additional vector with dates in format that can
@@ -237,18 +357,16 @@ plot_components <- function(object,
 #' @param alpha The transparency parameter used when adding the paths to the
 #'    plot, provided to [ggplot2::geom_point()] and [ggplot2::geom_line()]
 #'
-#' @export
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
 #' fitted <- heuristika(y = y, m = 12, family = "norm")
-#' paths <- draw_paths(object = fitted, h = 12)
+#' paths <- predict(object = fitted, h = 12)
 #'
-#' plot_paths(object = fitted, paths = paths, n = 3)
+#' plot_paths(object = paths, n = 3)
 #'
 plot_paths <- function(object,
-                       paths,
                        date = NULL,
                        date_future = NULL,
                        n = 5,
@@ -259,6 +377,11 @@ plot_paths <- function(object,
       call. = FALSE
     )
   }
+
+  checkmate::assert_class(x = object, classes = "heuristika_paths")
+
+  paths <- object$paths
+  model <- object$model
 
   checkmate::assert_matrix(x = paths, mode = "numeric")
   h <- dim(paths)[1]
@@ -275,7 +398,7 @@ plot_paths <- function(object,
     any.missing = FALSE
   )
   checkmate::assert_date(
-    x = date, len = length(object$y), null.ok = TRUE, any.missing = FALSE
+    x = date, len = length(model$y), null.ok = TRUE, any.missing = FALSE
   )
   checkmate::assert_date(
     x = date_future, len = h, null.ok = TRUE, any.missing = FALSE
@@ -283,8 +406,8 @@ plot_paths <- function(object,
 
   if (is.null(date) || is.null(date_future)) {
     date_label <- NA
-    date <- 1:length(object$y)
-    date_future <- (length(object$y) + 1):(length(object$y) + h)
+    date <- 1:length(model$y)
+    date_future <- (length(model$y) + 1):(length(model$y) + h)
   } else {
     date_label <- "Date"
   }
@@ -306,7 +429,7 @@ plot_paths <- function(object,
 
   df_input <- data.frame(
     date = date,
-    value = object$y
+    value = model$y
   )
 
   ggp <- ggplot2::ggplot(mapping = ggplot2::aes(x = date)) +
@@ -350,26 +473,26 @@ plot_paths <- function(object,
 #' is available will be checked when the function is run. `ggplot2` is only
 #' suggested, not a default import.
 #'
-#' @param object Fitted model object returned by [heuristika()]
-#' @param probs Numeric vector of probabilities, passed to [stats::quantile()]
+#' @param object An object of class `heuristika_paths` as returned by
+#'     `predict.heuristika()`
 #' @param date Optional additional vector with dates in format that can be cast
 #'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
 #' @param date_future Optional additional vector with dates in format that can
 #'     be cast to `YYYY-MM-DD` with same length as `object$y`, used to create
 #'     x-axis for forecast paths
+#' @param show_params Logical; if `TRUE` (default) then fitted params will be
+#'     displayed using [ggplot2::facet_wrap()]
 #'
-#' @export
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
 #' fitted <- heuristika(y = y, m = 12, family = "norm")
-#' paths <- draw_paths(object = fitted, h = 12)
+#' paths <- predict(object = fitted, h = 12)
 #'
-#' plot_forecast(object = fitted, paths = paths)
+#' plot_forecast(object = fitted)
 #'
 plot_forecast <- function(object,
-                          paths,
                           date = NULL,
                           date_future = NULL,
                           show_params = TRUE) {
@@ -380,6 +503,11 @@ plot_forecast <- function(object,
     )
   }
 
+  checkmate::assert_class(x = object, classes = "heuristika_paths")
+
+  paths <- object$paths
+  model <- object$model
+
   checkmate::assert_logical(
     x = show_params, len = 1, null.ok = FALSE, any.missing = FALSE
   )
@@ -387,7 +515,7 @@ plot_forecast <- function(object,
   h <- dim(paths)[1]
 
   checkmate::assert_date(
-    x = date, len = length(object$y), null.ok = TRUE, any.missing = FALSE
+    x = date, len = length(model$y), null.ok = TRUE, any.missing = FALSE
   )
   checkmate::assert_date(
     x = date_future, len = h, null.ok = TRUE, any.missing = FALSE
@@ -395,20 +523,20 @@ plot_forecast <- function(object,
 
   if (is.null(date) || is.null(date_future)) {
     date_label <- NA
-    date <- 1:length(object$y)
-    date_future <- (length(object$y) + 1):(length(object$y) + h)
+    date <- 1:length(model$y)
+    date_future <- (length(model$y) + 1):(length(model$y) + h)
   } else {
     date_label <- "Date"
   }
 
-  params <- paste0("alpha: ", round(object$param_grid[1], 4),
-                   "; beta: ", round(object$param_grid[3], 4),
-                   "; gamma: ", round(object$param_grid[5], 4),
-                   "; sigma: ", round(object$sigma, 2))
+  params <- paste0("alpha: ", round(model$param_grid[1], 4),
+                   "; beta: ", round(model$param_grid[3], 4),
+                   "; gamma: ", round(model$param_grid[5], 4),
+                   "; sigma: ", round(model$sigma, 2))
 
   df_input <- data.frame(
     date = date,
-    value = object$y
+    value = model$y
   )
 
   df_future <- data.frame(
@@ -423,14 +551,14 @@ plot_forecast <- function(object,
   )
 
   interval_text <- "Forecast intervals at 50%, 66%, and 92%."
-  if (object$m == 12) {
+  if (model$m == 12) {
     interval_text <- paste0(
       interval_text,
       "\nThis corresponds to falling outside the interval for half of the year, once per quarter, once per year.") # no lint
   }
 
-  df_input$family <- paste0("Family: ", object$family)
-  df_future$family <- paste0("Family: ", object$family)
+  df_input$family <- paste0("Family: ", model$family)
+  df_future$family <- paste0("Family: ", model$family)
   df_input$params <- params
   df_future$params <- params
 

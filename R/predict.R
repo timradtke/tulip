@@ -11,17 +11,20 @@
 #' columns represents one sample path and is a random draw from the
 #' `h`-dimensional forecast distribution. See also examples below.
 #'
-#' @param object The fitted model object returned by [heuristika()].
-#' @param h The forecast horizon as integer number of periods
+#' @param object The fitted model object returned by [heuristika()] of class
+#'     `heuristika`.
+#' @param h The forecast horizon as integer number of periods.
 #' @param n The integer number of sample paths to draw from the forecast
-#'     distribution
+#'     distribution.
 #' @param switch_to_cauchy_if_outliers If `TRUE`, then if the fitted model uses
 #'     a Normal distribution as likelihood but outliers were detected and
 #'     interpolated during fitting of the smoothing parameters, then the
 #'     forecast distribution can automatically switch to a Cauchy distribution
 #'     from which sample paths are drawn instead. Default is `FALSE`.
+#' @param ... arguments passed to or from other methods.
 #'
-#' @seealso [heuristika()]
+#' @seealso [heuristika()], [stats::predict()]
+#'
 #' @export
 #'
 #' @examples
@@ -33,7 +36,7 @@
 #'
 #' ls_fit <- heuristika(y = y, m = 12, family = "norm")
 #'
-#' m_fc <- draw_paths(object = ls_fit, h = 12, n = 10000)
+#' m_fc <- predict(object = ls_fit, h = 12, n = 10000)
 #'
 #' # summarize over draws (columns) to get point forecasts
 #' rowMeans(m_fc)
@@ -60,14 +63,14 @@
 #' cor(m_fc[4, ], m_fc[6, ])
 #' cor(m_fc_shuffled[1, ], m_fc_shuffled[3, ])
 #'
-draw_paths <- function(object,
-                       h = 12,
-                       n = 10000,
-                       switch_to_cauchy_if_outliers = FALSE) {
+predict.heuristika <- function(object,
+                               h = 12,
+                               n = 10000,
+                               switch_to_cauchy_if_outliers = FALSE,
+                               ...) {
 
-  checkmate::assert_list(
-    x = object, null.ok = TRUE
-  )
+  checkmate::assert_class(x = object, classes = "heuristika", null.ok = FALSE)
+  checkmate::assert_list(x = object, null.ok = TRUE)
   checkmate::assert_names(
     x = names(object),
     must.include = c("l", "b", "s", "l_init", "b_init", "s_init",
@@ -83,19 +86,37 @@ draw_paths <- function(object,
 
   if (isTRUE(object$comment == "no_variance")) {
     return(
-      matrix(unique(object$y), ncol = n, nrow = h)
+      structure(
+        list(
+          paths = matrix(unique(object$y), ncol = n, nrow = h),
+          model = object
+        ),
+        class = c("heuristika_paths", "matrix", "array")
+      )
     )
   }
   if (isTRUE(object$comment == "single_obs")) {
     return(
-      matrix(unique(object$y), ncol = n, nrow = h)
+      structure(
+        list(
+          paths = matrix(unique(object$y), ncol = n, nrow = h),
+          model = object
+        ),
+        class = c("heuristika_paths", "matrix", "array")
+      )
     )
   }
   if (isTRUE(object$comment == "mad_zero")) {
     warning("Using a bootstrap forecast since the MAD of the input `y` is 0.")
     return(
-      matrix(sample(x = object$y, size = n * h, replace = TRUE),
-             ncol = n, nrow = h)
+      structure(
+        list(
+          paths = matrix(sample(x = object$y, size = n * h, replace = TRUE),
+                         ncol = n, nrow = h),
+          model = object
+        ),
+        class = c("heuristika_paths", "matrix", "array")
+      )
     )
   }
 
@@ -207,5 +228,13 @@ draw_paths <- function(object,
     y_orig <- expm1(y_orig)
   }
 
-  return(y_orig)
+  result <- structure(
+    list(
+      paths = y_orig,
+      model = object
+    ),
+    class = "heuristika_paths"
+  )
+
+  return(result)
 }

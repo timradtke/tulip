@@ -17,6 +17,15 @@ heuristika(
   min_obs_anomaly_removal = 12
 )
 }
+\value{
+An object of class \code{heuristika}, a list with components:
+\describe{
+\item{y_hat}{Fitted values}
+\item{y}{Input time series}
+\item{x_hat}{Fitted values on standardized scale}
+\item{x}{Input time series on standardized scale}
+}
+}
 \description{
 Fit a robust exponential smoothing model via grid search
 }

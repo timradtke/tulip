@@ -43,58 +43,139 @@ devtools::install_github("timradtke/heuristika")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+Let’s first create some example data:
 
 ``` r
-library(heuristika)
+set.seed(512)
 
-y <- rnorm(55, mean = 25 + sinpi(1:55 / 6), sd = 0.5)
+n <- 56
+h <- 12
 
-fitted_model <- heuristika::heuristika(y = y, m = 12, family = "auto")
-```
-
-<img src="man/figures/README-plot_fit-1.png" width="100%" />
-
-``` r
-fc <- heuristika::draw_paths(
-  object = fitted_model, 
-  h = 12, 
-  n = 10000
+start_date <- as.Date(paste0(format(Sys.Date(), "%Y-%m"), "-01"))
+dates <- seq(
+  lubridate::`%m-%`(start_date, months(n-1)), 
+  start_date, 
+  by = "month"
+)
+dates_future <- seq(
+  lubridate::`%m+%`(start_date, months(1)), 
+  lubridate::`%m+%`(start_date, months(h)),
+  by = "month"
 )
 ```
 
 ``` r
-plot(x = 1:67, y = c(y, rep(NA, 12)), pch = 19, 
-     ylim = c(min(y)*0.95, max(y)*1.05),
-     xlab = NA, ylab = NA)
-lines(1:67, c(y, rep(NA, 12)))
+tmp_trend <- log(1:n) * 100
+tmp_season <- sinpi(1:n / 6) * 50
 
-for (j in 1:5) {
-  lines(56:67, fc[, j], col = j + 1)
+y <- rep(NA, n)
+for (i in 1:n) {
+  y[i] <- 0.4 * rt(n = 1, df = 2) * 50
+  if (i > 1) y[i] <- 0.6 * y[i-1] + y[i]
 }
+y <- y + tmp_trend + tmp_season
 ```
 
-<img src="man/figures/README-plot_sample_paths-1.png" width="100%" />
+### Training a `heuristika` model
+
+A `heuristika` model can be fit against the series by additionally
+specifying the expected period length `m` of the seasonal component.
 
 ``` r
-quantiles <- c(0.01, 0.05, 0.13, 0.5, 0.87, 0.95, 0.99)
+library(heuristika)
 
-plot(x = 1:67, y = c(y, rep(NA, 12)), pch = 19, 
-     ylim = c(min(y)*0.95, max(y)*1.05),
-     xlab = NA, ylab = NA)
-lines(x = 1:67, y = c(y, rep(NA, 12)))
-for (j in seq_along(quantiles)) {
-  lines(
-    x = 56:67, 
-    y = apply(fc, quantile, MARGIN = 1, quantiles[j], na.rm = TRUE), 
-    col = rgb(red = 0, green = 0, blue = 1, 
-              alpha = 1 - abs(0.5 - quantiles[j])),
-    lwd = 1 - abs(0.5 - quantiles[j])
-    )
-}
+fitted_model <- heuristika::heuristika(y = y, m = 12, family = "auto")
 ```
 
-<img src="man/figures/README-plot_quantiles-1.png" width="100%" />
+We don’t import `ggplot2` by default, but if it is made available one
+can use its `autoplot` generic to visualize the fitted model as
+`heuristika` provides methods for its classes.
+
+By default, `autoplot()` will show the fitted model’s components on the
+internal standardized scale:
+
+``` r
+library(ggplot2)
+autoplot(fitted_model)
+```
+
+<img src="man/figures/README-autoplot_fitted_values-1.png" width="100%" />
+
+Note that the scale of the components can be quite different, which
+becomes clear when we fix the y-axis scale across components:
+
+``` r
+autoplot(fitted_model, scales = "fixed")
+```
+
+<img src="man/figures/README-autoplot_fitted_components_fixed-1.png" width="100%" />
+
+Alternatively, one can also display the fitted values against the input
+time series:
+
+``` r
+autoplot(fitted_model, method = "fitted", date = dates)
+```
+
+<img src="man/figures/README-autoplot_fitted_fitted-1.png" width="100%" />
+
+### Forecasting with `heuristika`
+
+Just use `predict()` on the fitted model to generate sample paths from
+the forecast distribution:
+
+``` r
+forecast <- predict(object = fitted_model, h = 12, n = 10000)
+```
+
+The returned `forecast` object has it’s own `heuristika_paths` class
+which can again be plotted using `autoplot()`:
+
+``` r
+autoplot(forecast, date = dates, date_future = dates_future)
+```
+
+<img src="man/figures/README-autoplot_forecast_forecast-1.png" width="100%" />
+
+Special about `heuristika` is that sample paths from the joint forecast
+distribution are the native output of `heuristika`s predict method–in
+contrast to, for example, the usual point forecasts or pre-aggregated
+quantiles.
+
+They can be accessed via the `paths` matrix of dimensions `h` by `n`:
+
+``` r
+dim(forecast$paths)
+#> [1]    12 10000
+```
+
+These are the five first forecast paths:
+
+``` r
+round(forecast$paths[, 1:5], 1)
+#>        [,1]  [,2]  [,3]  [,4]  [,5]
+#>  [1,] 353.9 415.7 398.2 355.3 404.4
+#>  [2,] 380.3 404.4 315.3 417.8 383.7
+#>  [3,] 414.9 408.5 387.1 424.6 444.3
+#>  [4,] 485.6 471.5 459.6 475.0 427.4
+#>  [5,] 497.3 454.5 474.9 449.6 415.8
+#>  [6,] 506.5 422.3 570.6 344.8 421.7
+#>  [7,] 484.1 523.1 437.6 526.5 526.6
+#>  [8,] 469.5 501.3 487.3 449.5 458.2
+#>  [9,] 460.9 880.8 472.3 512.6 336.6
+#> [10,] 505.0 533.2 492.2 434.6 504.6
+#> [11,] 534.4 425.1 501.4 474.4 462.9
+#> [12,] 451.9 356.4 431.4 427.2 408.2
+```
+
+A random sample of five forecast paths can be plotted by choosing the
+`method = "paths"`:
+
+``` r
+autoplot(forecast, method = "paths", date = dates, date_future = dates_future)
+```
+
+<img src="man/figures/README-autoplot_forecast_paths-1.png" width="100%" />
 
 ## AirPassengers
 
@@ -103,71 +184,22 @@ air_passengers <- log1p(as.numeric(AirPassengers))
 ap_n <- length(air_passengers)
 
 tictoc::tic()
-ap_fit <- heuristika::heuristika(
+ap_fit <- heuristika(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.365 sec elapsed
+#> 1.594 sec elapsed
 
 tictoc::tic()
-ap_fc <- heuristika::draw_paths(object = ap_fit, h = 12, n = 10000)
+ap_fc <- predict(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
-#> 0.174 sec elapsed
+#> 0.117 sec elapsed
+
+ap_fc$paths <- expm1(ap_fc$paths)
+ap_fc$model$y <- expm1(ap_fc$model$y)
 ```
 
 <img src="man/figures/README-airpassengers_plot-1.png" width="100%" />
-
-## deaths
-
-``` r
-deaths <- as.numeric(fdeaths)
-d_n <- length(deaths)
-
-tictoc::tic()
-d_fit <- heuristika::heuristika(
-  y = deaths[1:(d_n-12)], m = 12, family = "norm", 
-)
-tictoc::toc()
-#> 0.423 sec elapsed
-
-tictoc::tic()
-d_fc <- heuristika::draw_paths(
-  object = d_fit, 
-  h = 12, 
-  n = 10000,
-  switch_to_cauchy_if_outliers = FALSE
-)
-tictoc::toc()
-#> 0.101 sec elapsed
-```
-
-<img src="man/figures/README-deaths_plot-1.png" width="100%" />
-
-## UKgas
-
-``` r
-ukgas <- as.numeric(UKgas)
-ug_n <- length(ukgas)
-
-tictoc::tic()
-ug_fit <- heuristika::heuristika(
-  y = log1p(ukgas[1:(ug_n-12)]), m = 4, family = "norm", 
-)
-tictoc::toc()
-#> 0.778 sec elapsed
-
-tictoc::tic()
-ug_fc <- heuristika::draw_paths(
-  object = ug_fit, 
-  h = 12, 
-  n = 10000,
-  switch_to_cauchy_if_outliers = FALSE
-)
-tictoc::toc()
-#> 0.151 sec elapsed
-```
-
-<img src="man/figures/README-ukgas_plot-1.png" width="100%" />
 
 ## References
 

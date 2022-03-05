@@ -1,5 +1,13 @@
 #' Fit a robust exponential smoothing model via grid search
 #'
+#' @return An object of class `heuristika`, a list with components:
+#' \describe{
+#'   \item{y_hat}{Fitted values}
+#'   \item{y}{Input time series}
+#'   \item{x_hat}{Fitted values on standardized scale}
+#'   \item{x}{Input time series on standardized scale}
+#' }
+#'
 #' @seealso [draw_paths()], [initialize_states()], [initialize_param_grid()],
 #'     [add_prior_level()], [add_prior_trend()], [add_prior_seasonality()],
 #'     [add_prior_error()], [add_prior_anomaly()]
@@ -210,6 +218,7 @@ heuristika <- function(y,
     )
   )
 
+  class(fitted_model) <- "heuristika"
   return(fitted_model)
 }
 
@@ -246,6 +255,7 @@ default_object <- function(y, y_hat, m, comment) {
   )
 
   res$full <- res
+  class(res) <- "heuristika"
 
   return(res)
 }

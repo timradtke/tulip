@@ -1,6 +1,7 @@
 test_that("heuristika requires only arguments y and m", {
   y <- rnorm(n = 50, mean = 50)
   heuristika_object <- heuristika(y = y, m = 12)
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 })
@@ -10,6 +11,7 @@ test_that("heuristika returns single_obs commment if y is single observation", {
     heuristika_object <- heuristika(y = rnorm(n = 1), m = 12),
     regexp = "length"
   )
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(!is.null(heuristika_object$comment))
   expect_identical(object = heuristika_object$comment, expected = "single_obs")
   expect_identical(object = heuristika_object$y_hat,
@@ -21,6 +23,7 @@ test_that("heuristika returns no_variance commment if y is constant", {
     heuristika_object <- heuristika(y = c(100, 100, 100, 100, 100), m = 12),
     regexp = "vary"
   )
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(!is.null(heuristika_object$comment))
   expect_identical(object = heuristika_object$comment, expected = "no_variance")
   expect_identical(object = heuristika_object$y_hat,
@@ -32,6 +35,7 @@ test_that("heuristika returns mad_zero commment if y is mostly constant", {
     heuristika_object <- heuristika(y = c(100, 100, 100, rnorm(2)), m = 12),
     regexp = "MAD"
   )
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(!is.null(heuristika_object$comment))
   expect_identical(object = heuristika_object$comment, expected = "mad_zero")
   expect_identical(object = heuristika_object$y_hat,
@@ -67,6 +71,7 @@ test_that("heuristika fails if m is not integerish", {
 test_that("heuristika works when length of y is less than m", {
   y <- rnorm(n = 50, mean = 6)
   heuristika_object <- heuristika(y = y, m = 12)
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 })
@@ -74,6 +79,7 @@ test_that("heuristika works when length of y is less than m", {
 test_that("heuristika works for m equal to 1", {
   y <- rnorm(n = 50, mean = 50)
   heuristika_object <- heuristika(y = y, m = 1)
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 })
@@ -82,18 +88,22 @@ test_that("each family option works on simple example", {
   y <- rnorm(n = 50, mean = 50)
 
   heuristika_object <- heuristika(y = y, m = 12, family = "auto")
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 
   heuristika_object <- heuristika(y = y, m = 12, family = "norm")
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 
   heuristika_object <- heuristika(y = y, m = 12, family = "cauchy")
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 
   heuristika_object <- heuristika(y = y, m = 12, family = "student")
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 })
@@ -142,6 +152,7 @@ colnames(param_grid) <- c("alpha", "one_minus_alpha",
 test_that("heuristika works for example param_grid", {
   y <- rnorm(n = 50, mean = 50)
   heuristika_object <- heuristika(y = y, m = 12, param_grid = param_grid)
+  expect_s3_class(object = heuristika_object, class = "heuristika")
   expect_true(is.list(heuristika_object))
   expect_false(anyNA(heuristika_object$param_grid))
 })
@@ -175,4 +186,23 @@ test_that("heuristika fails if a param_grid value is NA", {
   tmp_param_grid[2,3] <- NA
   expect_error(heuristika(y = y, m = 12, param_grid = tmp_param_grid),
                regexp = "Assertion")
+})
+
+test_that("heuristika's speed did not regress", {
+  skip_on_cran()
+  set.seed(4027)
+  y <- rt(n = 50, df = 3)
+
+  mb_timing <- microbenchmark::microbenchmark({
+    heuristika(y = y, m = 12, family = "auto")
+  },
+  times = 250L,
+  unit = "seconds"
+  )
+
+  # median is less than 0.66 seconds
+  expect_true(median(mb_timing$time) / 1000000000 < 0.66)
+
+  # max is less than 1 second
+  expect_true(max(mb_timing$time) / 1000000000 < 1.25)
 })
