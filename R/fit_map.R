@@ -64,7 +64,7 @@ fit_map <- function(param_grid,
       n_obs = n_obs,
       method = "norm",
       shape = priors$error$shape,
-      rate = priors$error$rate
+      scale = priors$error$scale
     )
     l_sigma_norm <- log_prior_sigma(priors = priors, sigma = sigma_norm)
     l_norm <- log_lik_norm(errors = errors, sigma = sigma_norm)
@@ -81,7 +81,7 @@ fit_map <- function(param_grid,
         n_obs = n_obs,
         method = "norm",
         shape = priors$error$shape,
-        rate = priors$error$rate
+        scale = priors$error$scale
       )
     }
     sigma_student <- fit_sigma(errors = errors, n_obs = n_obs, method = "student")
@@ -132,11 +132,32 @@ limit <- function(x) {
   pmin(pmax(x, 0.0001), 0.9999)
 }
 
+dinvgamma <- function(x, shape, scale, log = FALSE) {
+  # https://en.wikipedia.org/wiki/Inverse-gamma_distribution#Probability_density_function
+  checkmate::assert_numeric(x = x)
+  checkmate::assert_numeric(x = shape, lower = 0, len = 1)
+  checkmate::assert_numeric(x = scale, lower = 0, len = 1)
+  checkmate::assert_true(shape > 0)
+  checkmate::assert_true(scale > 0)
+
+  y <- ifelse(
+    x > 0,
+    scale^shape / gamma(x = shape) * (1 / x)^(shape + 1) * exp(-scale / x),
+    NA
+  )
+
+  if (log == TRUE) {
+    y <- log(y)
+  }
+
+  return(y)
+}
+
 log_prior_sigma <- function(priors, sigma) {
-  dgamma(
-    1 / sigma^2,
+  dinvgamma(
+    sigma^2,
     shape = priors$error$shape,
-    rate = priors$error$rate,
+    scale = priors$error$scale,
     log = TRUE
   )
 }
@@ -181,15 +202,16 @@ fit_sigma <- function(errors,
                       method = c("norm", "cauchy", "student")[1],
                       n_obs,
                       shape = NULL,
-                      rate = NULL) {
+                      scale = NULL) {
   if (method == "norm") {
-    # https://en.wikipedia.org/wiki/Conjugate_prior
+    # https://www.cs.ubc.ca/~murphyk/Papers/bayesGauss.pdf
     # Normal assuming mean is known (at 0)
 
-    sigma_rate <- rate + colSums(errors^2)/2
     sigma_shape <- shape + n_obs / 2
+    sigma_scale <- ((shape * scale + n_obs * colSums(errors^2)) /
+                      (shape + n_obs)) / 2
 
-    sigma <- sqrt(sigma_rate / sigma_shape)
+    sigma <- sqrt(sigma_scale / sigma_shape)
   } else if (method == "cauchy") {
     sigma <- apply(X = errors, MARGIN = 2, FUN = stats::IQR) / 2
   } else if (method == "student") {

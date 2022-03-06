@@ -126,13 +126,13 @@ heuristika <- function(y,
     # ensure the expected order of columns, just in case
     param_grid <- param_grid[, c("alpha", "one_minus_alpha",
                                  "beta", "one_minus_beta",
-                                 "gamma", "one_minus_gamma")]
+                                 "gamma", "one_minus_gamma"), drop = FALSE]
     checkmate::assert_true(all((rowSums(param_grid) - 3) < 0.001))
     checkmate::assert_true(all(param_grid <= 1 & param_grid >= 0))
   }
 
   if (is.null(priors)) {
-    priors <- add_prior_error(shape = 3, rate = 2*0.75)
+    priors <- add_prior_error(shape = 0.5, scale = 0.05)
     priors <- add_prior_anomaly(prob = 1 / n_y, priors = priors)
     priors <- add_prior_level(alpha = 1, beta = 7, priors = priors)
     priors <- add_prior_trend(

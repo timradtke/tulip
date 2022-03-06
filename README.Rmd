@@ -7,6 +7,7 @@ output: github_document
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
+  dev = "svglite",
   comment = "#>",
   fig.path = "man/figures/README-",
   out.width = "100%"
@@ -92,7 +93,7 @@ A `heuristika` model can be fit against the series by additionally specifying th
 ```{r example}
 library(heuristika)
 
-fitted_model <- heuristika::heuristika(y = y, m = 12, family = "auto")
+fitted_model <- heuristika::heuristika(y = y, m = 12, family = "student")
 ```
 
 We don't import `ggplot2` by default, but if it is made available one can use its `autoplot` generic to visualize the fitted model as `heuristika` provides methods for its classes.

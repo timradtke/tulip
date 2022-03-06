@@ -84,7 +84,7 @@ specifying the expected period length `m` of the seasonal component.
 ``` r
 library(heuristika)
 
-fitted_model <- heuristika::heuristika(y = y, m = 12, family = "auto")
+fitted_model <- heuristika::heuristika(y = y, m = 12, family = "student")
 ```
 
 We don’t import `ggplot2` by default, but if it is made available one
@@ -99,7 +99,7 @@ library(ggplot2)
 autoplot(fitted_model)
 ```
 
-<img src="man/figures/README-autoplot_fitted_values-1.png" width="100%" />
+<img src="man/figures/README-autoplot_fitted_values-1.svg" width="100%" />
 
 Note that the scale of the components can be quite different, which
 becomes clear when we fix the y-axis scale across components:
@@ -108,7 +108,7 @@ becomes clear when we fix the y-axis scale across components:
 autoplot(fitted_model, scales = "fixed")
 ```
 
-<img src="man/figures/README-autoplot_fitted_components_fixed-1.png" width="100%" />
+<img src="man/figures/README-autoplot_fitted_components_fixed-1.svg" width="100%" />
 
 Alternatively, one can also display the fitted values against the input
 time series:
@@ -117,7 +117,7 @@ time series:
 autoplot(fitted_model, method = "fitted", date = dates)
 ```
 
-<img src="man/figures/README-autoplot_fitted_fitted-1.png" width="100%" />
+<img src="man/figures/README-autoplot_fitted_fitted-1.svg" width="100%" />
 
 ### Forecasting with `heuristika`
 
@@ -135,7 +135,7 @@ which can again be plotted using `autoplot()`:
 autoplot(forecast, date = dates, date_future = dates_future)
 ```
 
-<img src="man/figures/README-autoplot_forecast_forecast-1.png" width="100%" />
+<img src="man/figures/README-autoplot_forecast_forecast-1.svg" width="100%" />
 
 Special about `heuristika` is that sample paths from the joint forecast
 distribution are the native output of `heuristika`s predict method–in
@@ -175,7 +175,7 @@ A random sample of five forecast paths can be plotted by choosing the
 autoplot(forecast, method = "paths", date = dates, date_future = dates_future)
 ```
 
-<img src="man/figures/README-autoplot_forecast_paths-1.png" width="100%" />
+<img src="man/figures/README-autoplot_forecast_paths-1.svg" width="100%" />
 
 ## AirPassengers
 
@@ -188,18 +188,18 @@ ap_fit <- heuristika(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.594 sec elapsed
+#> 1.492 sec elapsed
 
 tictoc::tic()
 ap_fc <- predict(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
-#> 0.117 sec elapsed
+#> 0.153 sec elapsed
 
 ap_fc$paths <- expm1(ap_fc$paths)
 ap_fc$model$y <- expm1(ap_fc$model$y)
 ```
 
-<img src="man/figures/README-airpassengers_plot-1.png" width="100%" />
+<img src="man/figures/README-airpassengers_plot-1.svg" width="100%" />
 
 ## References
 

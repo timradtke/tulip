@@ -44,7 +44,7 @@ add_prior_anomaly <- function(prob, priors = NULL) {
 #' Add a prior on the standard deviation of the error component
 #'
 #' @param shape TBD
-#' @param rate TBD
+#' @param scale TBD
 #' @param priors A list containing other, already defined, priors. If not
 #'   provided, a list will be started with `error` as entry. Else, the
 #'   provided list will be extended with `error`.
@@ -56,38 +56,92 @@ add_prior_anomaly <- function(prob, priors = NULL) {
 #' @seealso `add_prior_trend()`, `add_prior_level()`, `add_prior_seasonality()`,
 #'   `add_prior_anomaly()`
 #'
+#' @references
+#'   https://en.wikipedia.org/wiki/Inverse-gamma_distribution#Probability_density_function
+#'
 #' @export
 #' @examples
 #' ps <- list()
-#' ps <- add_prior_error(3, 2*0.75)
+#' ps <- add_prior_error(shape = 3, scale = 0.5)
 #' print(ps)
 #'
 #' # overwrites the existing entry
-#' ps <- add_prior_error(3, 2*0.5)
+#' ps <- add_prior_error(shape = 3, scale = 0.5)
 #' print(ps)
 #'
-add_prior_error <- function(shape, rate, priors = NULL, verbose = FALSE) {
+#' # print summary information
+#' add_prior_error(shape = 3, scale = 0.5, verbose = TRUE)
+#'
+#' # the Inverse Gamma doesn't have a variance if shape is 2 or less
+#' add_prior_error(shape = 2, scale = 0.5, verbose = TRUE)
+#'
+#' # the Inverse Gamma has neither a mean nor variance if shape is 1 or less
+#' add_prior_error(shape = 1, scale = 0.5, verbose = TRUE)
+#'
+#' # plot the implied density function with indicator for the mean
+#' add_prior_error(shape = 3, scale = 0.5, plot = TRUE)
+#' add_prior_error(shape = 2, scale = 0.5, plot = TRUE)
+#' add_prior_error(shape = 3, scale = 2, plot = TRUE)
+#' add_prior_error(shape = 1, scale = 1, plot = TRUE)
+#'
+#' # the prior might be easier to judge on the scale of the standard deviation
+#' add_prior_error(shape = 3, scale = 0.5, plot = TRUE)
+#' add_prior_error(shape = 2, scale = 0.5, plot = TRUE, show_sigma = TRUE)
+#'
+add_prior_error <- function(shape,
+                            scale,
+                            priors = NULL,
+                            verbose = FALSE,
+                            plot = FALSE,
+                            show_sigma = FALSE) {
 
+  checkmate::assert_numeric(x = shape, len = 1, lower = 0)
+  checkmate::assert_numeric(x = scale, len = 1, lower = 0)
   checkmate::assert_list(x = priors, null.ok = TRUE)
-  checkmate::assert_logical(x = verbose)
-  # checkmate::assert_logical(x = plot)
+  checkmate::assert_logical(x = verbose, len = 1, null.ok = FALSE)
+  checkmate::assert_logical(x = plot, len = 1, null.ok = FALSE)
+
+  tmp_mode <- round(scale / (shape + 1), 4)
+  tmp_mean <- NA
+  tmp_sd <- NA
+
+  if (shape > 2) {
+    tmp_sd <- round(sqrt(scale^2 / ((shape - 1)^2 * (shape - 2))), 4)
+  }
+  if (shape > 1) {
+    tmp_mean <- round(scale / (shape - 1), 4)
+  }
 
   if (verbose) {
-    tmp_sigma <- sqrt(1 / rgamma(n = 10000L, shape = shape, rate = rate))
-    tmp_median <- round(median(tmp_sigma), 4)
-    tmp_quantiles <- round(quantile(x = tmp_sigma, probs = c(0.025, 0.975)), 4)
-
-    message(
-      sprintf(
-        "Prior distribution for the error component has a median at %s, and covers 95%% of probability mass with quantiles [%s, %s]", # nolint
-        tmp_median, tmp_quantiles[1], tmp_quantiles[2]
+    if (shape <= 1) {
+      msg <- sprintf(
+        "Prior distribution for the error component's variance has its mode at %s, with undefined mean and variance.",
+        tmp_mode
       )
+    } else if (shape <= 2) {
+      msg <- sprintf(
+        "Prior distribution for the error component's variance has its mode at %s and mean at %s, with undefined variance.",
+        tmp_mode, tmp_mean
+      )
+    } else {
+      msg <- sprintf(
+        "Prior distribution for the error component's variance has its mode at %s, mean at %s, and a standard deviation of %s.",
+        tmp_mode, tmp_mean, tmp_sd
+      )
+    }
+
+    message(msg)
+  }
+
+  if (plot) {
+    plot_invgamma(
+      shape = shape, scale = scale, xlim = c(0, 2), show_sigma = show_sigma
     )
   }
 
   error <- list(
     shape = shape,
-    rate = rate
+    scale = scale
   )
 
   if (is.null(priors)) {
@@ -375,4 +429,38 @@ plot_beta <- function(alpha, beta, xlab) {
     xlab = xlab,
     ylab = ""
   ); abline(v = 0.5, lty = 3)
+}
+
+plot_invgamma <- function(shape,
+                          scale,
+                          xlim,
+                          xlab,
+                          length.out = 10000,
+                          show_sigma = FALSE) {
+  x <- seq(from = xlim[1], to = xlim[2], length.out = length.out)
+  if (show_sigma) {
+    x_var <- sqrt(x)
+    xlab <- "sigma"
+
+  } else {
+    x_var <- x
+    xlab <- "sigma^2"
+  }
+  plot(
+    x = x_var,
+    y = dinvgamma(
+      x = x, shape = shape, scale = scale
+    ),
+    type = "l",
+    xlab = xlab,
+    ylab = ""
+  )
+  if (shape > 1) {
+    # add indicator for mean when it exists
+    if (show_sigma) {
+      abline(v = sqrt(scale / (shape - 1)), lty = 3)
+    } else {
+      abline(v = scale / (shape - 1), lty = 3)
+    }
+  }
 }
