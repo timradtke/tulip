@@ -1,17 +1,10 @@
-#' Fit parameters given time series, initial states, and parameter grid
-#'
-#' @param y Time series to which the model is fitted
-#' @param m Scalar indicating the period length of the suspected seasonality
-#' @param init_states A list of initial states as returned by
-#'     `initialize_states()`
-#' @param param_grid A matrix of possible parameter values used in grid search
-#'
 fit_states_over_grid <- function(y,
                                  m,
                                  init_states,
                                  param_grid,
                                  remove_anomalies,
                                  anomaly_budget,
+                                 anomaly_budget_most_recent_k,
                                  min_obs_anomaly_removal) {
 
   n <- length(y)
@@ -45,6 +38,12 @@ fit_states_over_grid <- function(y,
 
     ############################################################################
 
+    if ((i - m) == (n + 1 - anomaly_budget_most_recent_k)) {
+      # as there are only `anomaly_budget_most_recent_k` iterations left
+      # including the current one, release the budget for the most recent k obs
+      anomaly_budget <- anomaly_budget + anomaly_budget_most_recent_k
+    }
+
     if (all(is.na(y[i,]))) {
       # treat missing values like anomalies but irrespective of anomaly budget
       y[i,] <- y_hat[i,]
@@ -67,13 +66,13 @@ fit_states_over_grid <- function(y,
         sd = tmp_sigma
       ) > 0.99
 
-      anomaly_budget <- anomaly_budget - is_anomaly
-
       # use `y_hat` instead of `y` to continue update of parameters
       y[i,] <- ifelse(is_anomaly & anomaly_budget > 0, y_hat[i,], y[i,])
       # use `NA` instead of `y` to continue update of `tmp_sigma` next round
       # (we can't use `y_hat` because this will make `tmp_sigma` converge to 0)
       y_na[i,] <- ifelse(is_anomaly & anomaly_budget > 0, NA, y[i,])
+
+      anomaly_budget <- anomaly_budget - is_anomaly
     }
 
     ############################################################################

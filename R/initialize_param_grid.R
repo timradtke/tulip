@@ -91,6 +91,10 @@ initialize_param_grid <- function(n_alpha = 15,
     }
   }
 
+  param_grid <- param_grid[param_grid$alpha < 0.5, ]
+  param_grid <- param_grid[param_grid$beta < 0.5, ]
+  param_grid <- param_grid[param_grid$gamma < 0.5, ]
+
   param_grid <- unique(as.matrix(param_grid), MARGIN = 1)
 
   return(param_grid)

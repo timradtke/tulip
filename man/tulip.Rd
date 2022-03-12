@@ -14,6 +14,7 @@ tulip(
   seasonality_threshold = 0.5,
   remove_anomalies = TRUE,
   anomaly_budget = 5,
+  anomaly_budget_most_recent_k = 1,
   min_obs_anomaly_removal = 12
 )
 }
@@ -31,7 +32,7 @@ one of \code{auto} (default), \code{norm}, \code{student}, or \code{cauchy}.}
 
 \item{param_grid}{Matrix defining the grid of parameters to be trialled
 during grid search optimization; default parameter grid will be used if
-left NULL. Can be created using \verb{[initalize_param_grid()]}.}
+left \code{NULL}. Can be created using \code{\link[=initialize_param_grid]{initialize_param_grid()}}.}
 
 \item{priors}{List of priors on the models parameters; default priors will be
 used if left NULL. Can be created using \code{\link[=add_prior_error]{add_prior_error()}},
@@ -41,7 +42,7 @@ used if left NULL. Can be created using \code{\link[=add_prior_error]{add_prior_
 \item{init_states}{List of initial states \code{l}, \code{b}, and \code{s} used to start
 iterative smoothing of the time series for each set of the parameters in
 the parameter grid. Default initialization via \code{\link[=initialize_states]{initialize_states()}} will
-be used if left NULL.}
+be used if left \code{NULL}.}
 
 \item{remove_anomalies}{Logical; during fitting, anomalies can be identified
 and interpolated to not adversely affect the fitted states. The
@@ -59,6 +60,19 @@ set a somewhat low hard limit on the number of possible interpolations as
 some parameter grid combinations may be misspecified compared to the
 "correct" data generating process and would therefore consider every
 observation an anomaly.}
+
+\item{anomaly_budget_most_recent_k}{Integerish (default 1); additional budget
+reserved to remove anomalies from the \code{k} most recent observations only.
+Especially models with larger \code{alpha} and \code{beta} smoothing parameters
+adjust the forecast strongly to the most recent observation(s). But even if
+the smoothing parameters are small, an anomalous most recent observation(s)
+can have a large impact on the forecast if it is sufficiently large (or
+small). At the same time, it can be undesired that the forecast adjusts
+heavily to the one, two, or k most recent observations even if they are
+very different from the rest of the series. For a discussion of this, see
+also: Michael Bohlke-Schneider, Shubham Kapoor, Tim Januschowski (2020).
+\emph{Resilient Neural Forecasting Systems}.
+\url{https://www.amazon.science/publications/resilient-neural-forecasting-systems}}
 
 \item{min_obs_anomaly_removal}{Integerish (default 12); the anomaly detection
 relies on the fitted values' errors' standard deviation. The standard

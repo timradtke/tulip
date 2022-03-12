@@ -10,7 +10,7 @@
 #'   one of `auto` (default), `norm`, `student`, or `cauchy`.
 #' @param param_grid Matrix defining the grid of parameters to be trialled
 #'   during grid search optimization; default parameter grid will be used if
-#'   left NULL. Can be created using `[initalize_param_grid()]`.
+#'   left `NULL`. Can be created using [initialize_param_grid()].
 #' @param priors List of priors on the models parameters; default priors will be
 #'   used if left NULL. Can be created using [add_prior_error()],
 #'   [add_prior_level()], [add_prior_seasonality()], [add_prior_trend()],
@@ -18,7 +18,7 @@
 #' @param init_states List of initial states `l`, `b`, and `s` used to start
 #'   iterative smoothing of the time series for each set of the parameters in
 #'   the parameter grid. Default initialization via [initialize_states()] will
-#'   be used if left NULL.
+#'   be used if left `NULL`.
 #' @param remove_anomalies Logical; during fitting, anomalies can be identified
 #'   and interpolated to not adversely affect the fitted states. The
 #'   interpolated values are only used to fit the states. When it comes to
@@ -34,6 +34,18 @@
 #'   some parameter grid combinations may be misspecified compared to the
 #'   "correct" data generating process and would therefore consider every
 #'   observation an anomaly.
+#' @param anomaly_budget_most_recent_k Integerish (default 1); additional budget
+#'   reserved to remove anomalies from the `k` most recent observations only.
+#'   Especially models with larger `alpha` and `beta` smoothing parameters
+#'   adjust the forecast strongly to the most recent observation(s). But even if
+#'   the smoothing parameters are small, an anomalous most recent observation(s)
+#'   can have a large impact on the forecast if it is sufficiently large (or
+#'   small). At the same time, it can be undesired that the forecast adjusts
+#'   heavily to the one, two, or k most recent observations even if they are
+#'   very different from the rest of the series. For a discussion of this, see
+#'   also: Michael Bohlke-Schneider, Shubham Kapoor, Tim Januschowski (2020).
+#'   *Resilient Neural Forecasting Systems*.
+#'   <https://www.amazon.science/publications/resilient-neural-forecasting-systems>
 #' @param min_obs_anomaly_removal Integerish (default 12); the anomaly detection
 #'   relies on the fitted values' errors' standard deviation. The standard
 #'   deviation is iteratively updated as the state components are fitted from
@@ -86,6 +98,7 @@ tulip <- function(y,
                   seasonality_threshold = 0.5,
                   remove_anomalies = TRUE,
                   anomaly_budget = 5,
+                  anomaly_budget_most_recent_k = 1,
                   min_obs_anomaly_removal = 12) {
 
   checkmate::assert_numeric(x = y, any.missing = TRUE, min.len = 1)
@@ -114,6 +127,10 @@ tulip <- function(y,
   )
   checkmate::assert_integerish(
     x = anomaly_budget, lower = 0, len = 1, any.missing = FALSE, null.ok = FALSE
+  )
+  checkmate::assert_integerish(
+    x = anomaly_budget_most_recent_k, lower = 0, len = 1, any.missing = FALSE,
+    null.ok = FALSE
   )
   checkmate::assert_integerish(
     x = min_obs_anomaly_removal, lower = 2, len = 1, any.missing = FALSE,
@@ -206,6 +223,7 @@ tulip <- function(y,
     param_grid = param_grid,
     remove_anomalies = remove_anomalies,
     anomaly_budget = anomaly_budget,
+    anomaly_budget_most_recent_k = anomaly_budget_most_recent_k,
     min_obs_anomaly_removal = min_obs_anomaly_removal
   )
 
