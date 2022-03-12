@@ -4,35 +4,73 @@
 \alias{add_prior_error}
 \title{Add a prior on the standard deviation of the error component}
 \usage{
-add_prior_error(shape, rate, priors = NULL, verbose = FALSE)
+add_prior_error(
+  guess,
+  n,
+  priors = NULL,
+  verbose = FALSE,
+  plot = FALSE,
+  show_sigma = TRUE
+)
 }
 \arguments{
-\item{shape}{TBD}
+\item{guess}{Which standard deviation do you expect?}
 
-\item{rate}{TBD}
+\item{n}{How much weight (n terms of observations) do you want to give your
+prior assumption? The larger this value, the more data observations it will
+take to wash out your prior distribution in case it is misspecified.}
 
 \item{priors}{A list containing other, already defined, priors. If not
 provided, a list will be started with \code{error} as entry. Else, the
 provided list will be extended with \code{error}.}
 
 \item{verbose}{Should summarizing information be printed using \code{message()}?}
+
+\item{plot}{Should a simple plot of the implied Inverse Gamma density be
+drawn?}
 }
 \value{
 A list that includes a list named \code{error}, which is a list with
 \code{shape} and \code{rate} key-value pairs.
 }
 \description{
-Add a prior on the standard deviation of the error component
+Defines a prior using an Inverse Gamma distribution on the variance of
+the unexplained error component of the model.
+}
+\details{
+Since it's usually easier to think in terms of standard deviation, \code{guess}
+is at the scale of the error's standard deviation. Both \code{guess} and \code{n} are
+translated into the \code{shape} and \code{scale} parameters of the Inverse Gamma
+distribution.
+
+When thinking about this prior, frame your assumptions in terms of a sample
+of \code{n} observed errors with sample standard deviation \code{guess}.
 }
 \examples{
 ps <- list()
-ps <- add_prior_error(3, 2*0.75)
+ps <- add_prior_error(n = 3, guess = 0.5)
 print(ps)
 
 # overwrites the existing entry
-ps <- add_prior_error(3, 2*0.5)
+ps <- add_prior_error(n = 3, guess = 0.5)
 print(ps)
 
+# print summary information
+add_prior_error(n = 3, guess = 0.5, verbose = TRUE)
+
+# plot the implied density function with indicator for the mean
+add_prior_error(n = 3, guess = 0.5, plot = TRUE)
+add_prior_error(n = 2, guess = 0.5, plot = TRUE)
+add_prior_error(n = 3, guess = 2, plot = TRUE)
+add_prior_error(n = 1, guess = 1, plot = TRUE)
+
+# the prior might be easier to judge on the scale of the standard deviation
+add_prior_error(n = 1, guess = 0.5, plot = TRUE)
+add_prior_error(n = 1, guess = 0.5, plot = TRUE, show_sigma = TRUE)
+
+}
+\references{
+https://en.wikipedia.org/wiki/Inverse-gamma_distribution#Probability_density_function
 }
 \seealso{
 \code{add_prior_trend()}, \code{add_prior_level()}, \code{add_prior_seasonality()},

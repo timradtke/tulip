@@ -43,12 +43,27 @@ add_prior_anomaly <- function(prob, priors = NULL) {
 
 #' Add a prior on the standard deviation of the error component
 #'
-#' @param shape TBD
-#' @param scale TBD
+#' Defines a prior using an Inverse Gamma distribution on the variance of
+#' the unexplained error component of the model.
+#'
+#' Since it's usually easier to think in terms of standard deviation, `guess`
+#' is at the scale of the error's standard deviation. Both `guess` and `n` are
+#' translated into the `shape` and `scale` parameters of the Inverse Gamma
+#' distribution.
+#'
+#' When thinking about this prior, frame your assumptions in terms of a sample
+#' of `n` observed errors with sample standard deviation `guess`.
+#'
+#' @param guess Which standard deviation do you expect?
+#' @param n How much weight (n terms of observations) do you want to give your
+#'   prior assumption? The larger this value, the more data observations it will
+#'   take to wash out your prior distribution in case it is misspecified.
 #' @param priors A list containing other, already defined, priors. If not
 #'   provided, a list will be started with `error` as entry. Else, the
 #'   provided list will be extended with `error`.
 #' @param verbose Should summarizing information be printed using `message()`?
+#' @param plot Should a simple plot of the implied Inverse Gamma density be
+#'   drawn?
 #'
 #' @return A list that includes a list named `error`, which is a list with
 #'   `shape` and `rate` key-value pairs.
@@ -62,49 +77,46 @@ add_prior_anomaly <- function(prob, priors = NULL) {
 #' @export
 #' @examples
 #' ps <- list()
-#' ps <- add_prior_error(shape = 3, scale = 0.5)
+#' ps <- add_prior_error(n = 3, guess = 0.5)
 #' print(ps)
 #'
 #' # overwrites the existing entry
-#' ps <- add_prior_error(shape = 3, scale = 0.5)
+#' ps <- add_prior_error(n = 3, guess = 0.5)
 #' print(ps)
 #'
 #' # print summary information
-#' add_prior_error(shape = 3, scale = 0.5, verbose = TRUE)
-#'
-#' # the Inverse Gamma doesn't have a variance if shape is 2 or less
-#' add_prior_error(shape = 2, scale = 0.5, verbose = TRUE)
-#'
-#' # the Inverse Gamma has neither a mean nor variance if shape is 1 or less
-#' add_prior_error(shape = 1, scale = 0.5, verbose = TRUE)
+#' add_prior_error(n = 3, guess = 0.5, verbose = TRUE)
 #'
 #' # plot the implied density function with indicator for the mean
-#' add_prior_error(shape = 3, scale = 0.5, plot = TRUE)
-#' add_prior_error(shape = 2, scale = 0.5, plot = TRUE)
-#' add_prior_error(shape = 3, scale = 2, plot = TRUE)
-#' add_prior_error(shape = 1, scale = 1, plot = TRUE)
+#' add_prior_error(n = 3, guess = 0.5, plot = TRUE)
+#' add_prior_error(n = 2, guess = 0.5, plot = TRUE)
+#' add_prior_error(n = 3, guess = 2, plot = TRUE)
+#' add_prior_error(n = 1, guess = 1, plot = TRUE)
 #'
 #' # the prior might be easier to judge on the scale of the standard deviation
-#' add_prior_error(shape = 3, scale = 0.5, plot = TRUE)
-#' add_prior_error(shape = 2, scale = 0.5, plot = TRUE, show_sigma = TRUE)
+#' add_prior_error(n = 1, guess = 0.5, plot = TRUE)
+#' add_prior_error(n = 1, guess = 0.5, plot = TRUE, show_sigma = TRUE)
 #'
-add_prior_error <- function(shape,
-                            scale,
+add_prior_error <- function(guess,
+                            n,
                             priors = NULL,
                             verbose = FALSE,
                             plot = FALSE,
-                            show_sigma = FALSE) {
+                            show_sigma = TRUE) {
 
-  checkmate::assert_numeric(x = shape, len = 1, lower = 0)
-  checkmate::assert_numeric(x = scale, len = 1, lower = 0)
+  checkmate::assert_numeric(x = n, len = 1, lower = 0)
+  checkmate::assert_numeric(x = guess, len = 1, lower = 0)
   checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_logical(x = verbose, len = 1, null.ok = FALSE)
   checkmate::assert_logical(x = plot, len = 1, null.ok = FALSE)
+  checkmate::assert_logical(x = show_sigma, len = 1, null.ok = FALSE)
+
+  shape <- n / 2
+  scale <- guess^2 * n / 2
 
   tmp_mode <- round(scale / (shape + 1), 4)
   tmp_mean <- NA
   tmp_sd <- NA
-
   if (shape > 2) {
     tmp_sd <- round(sqrt(scale^2 / ((shape - 1)^2 * (shape - 2))), 4)
   }
@@ -113,24 +125,29 @@ add_prior_error <- function(shape,
   }
 
   if (verbose) {
+    msg_main <- sprintf(
+      "The equivalent Inverse-Gamma distribution on the error variance has shape %s and scale %s.",
+      round(shape, 6), round(scale, 6)
+    )
+
     if (shape <= 1) {
       msg <- sprintf(
-        "Prior distribution for the error component's variance has its mode at %s, with undefined mean and variance.",
+        "Its mode is at %s, with undefined mean and variance.",
         tmp_mode
       )
     } else if (shape <= 2) {
       msg <- sprintf(
-        "Prior distribution for the error component's variance has its mode at %s and mean at %s, with undefined variance.",
+        "Its mode is at %s and mean is at %s, with undefined variance.",
         tmp_mode, tmp_mean
       )
     } else {
       msg <- sprintf(
-        "Prior distribution for the error component's variance has its mode at %s, mean at %s, and a standard deviation of %s.",
+        "The distribution has its mode at %s, mean at %s, and a standard deviation of %s.",
         tmp_mode, tmp_mean, tmp_sd
       )
     }
 
-    message(msg)
+    message(paste0(msg_main, "\n", msg))
   }
 
   if (plot) {
@@ -168,10 +185,10 @@ add_prior_error <- function(shape,
 #' @param prob Probability that the time series has a seasonality, and that
 #'   therefore a seasonal component should be included in the model. This
 #'   parameterizes a Bernoulli distribution and should thus be a value in (0,1).
-#' @param alpha The `alpha` parameter of a Beta distribution, as `shape1` in
-#'   `dbeta()`. Must be larger than 0.
-#' @param beta The `beta` parameter of a Beta distribution, as `shape2` in
-#'   `dbeta()`. Must be larger than 0.
+#' @param guess Which \eqn{\gamma} parameter do you expect?
+#' @param n How much weight (n terms of observations) do you want to give your
+#'   prior assumption? The larger this value, the more data observations it will
+#'   take to wash out your prior distribution in case it is misspecified.
 #' @param priors A list containing other, already defined, priors. If not
 #'   provided, a list will be started with `seasonality` as entry. Else, the
 #'   provided list will be extended with `seasonality`.
@@ -187,23 +204,32 @@ add_prior_error <- function(shape,
 #' @export
 #' @examples
 #' ps <- add_prior_seasonality(
-#'   prob = 0.75, alpha = 1, beta = 5, verbose = TRUE, plot = TRUE
+#'   prob = 0.75, n = 6, guess = 1/6, verbose = TRUE, plot = TRUE
 #' )
 #'
 #' print(ps)
 add_prior_seasonality <- function(prob,
-                                  alpha,
-                                  beta,
+                                  guess,
+                                  n,
                                   priors = NULL,
                                   verbose = FALSE,
                                   plot = FALSE) {
 
-  checkmate::assert_numeric(x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1)
-  checkmate::assert_numeric(x = alpha, lower = 0.00001, any.missing = FALSE, len = 1)
-  checkmate::assert_numeric(x = beta, lower = 0.00001, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(
+    x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1
+  )
+  checkmate::assert_numeric(
+    x = n, lower = 0.00001, any.missing = FALSE, len = 1
+  )
+  checkmate::assert_numeric(
+    x = guess, lower = 1e-15, upper = 1 - 1e-15, any.missing = FALSE, len = 1
+  )
   checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_logical(x = verbose)
   checkmate::assert_logical(x = plot)
+
+  alpha <- guess * n
+  beta <- n - alpha
 
   if (verbose) {
     tmp_quantiles <- round(
@@ -262,10 +288,10 @@ add_prior_seasonality <- function(prob,
 #' @param prob Probability that the time series has a local-linear trend, and
 #'   that therefore a trend component should be included in the model. This
 #'   parameterizes a Bernoulli distribution and should thus be a value in (0,1).
-#' @param alpha The `alpha` parameter of a Beta distribution, as `shape1` in
-#'   `dbeta()`. Must be larger than 0.
-#' @param beta The `beta` parameter of a Beta distribution, as `shape2` in
-#'   `dbeta()`. Must be larger than 0.
+#' @param guess Which \eqn{\alpha \cdot \beta} parameter do you expect?
+#' @param n How much weight (n terms of observations) do you want to give your
+#'   prior assumption? The larger this value, the more data observations it will
+#'   take to wash out your prior distribution in case it is misspecified.
 #' @param priors A list containing other, already defined, priors. If not
 #'   provided, a list will be started with `trend` as entry. Else, the
 #'   provided list will be extended with `trend`.
@@ -286,18 +312,27 @@ add_prior_seasonality <- function(prob,
 #'
 #' print(ps)
 add_prior_trend <- function(prob,
-                            alpha,
-                            beta,
+                            guess,
+                            n,
                             priors = NULL,
                             verbose = FALSE,
                             plot = FALSE) {
 
-  checkmate::assert_numeric(x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1)
-  checkmate::assert_numeric(x = alpha, lower = 0.00001, any.missing = FALSE, len = 1)
-  checkmate::assert_numeric(x = beta, lower = 0.00001, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(
+    x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1
+  )
+  checkmate::assert_numeric(
+    x = n, lower = 0.00001, any.missing = FALSE, len = 1
+  )
+  checkmate::assert_numeric(
+    x = guess, lower = 1e-15, upper = 1 - 1e-15, any.missing = FALSE, len = 1
+  )
   checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_logical(x = verbose)
   checkmate::assert_logical(x = plot)
+
+  alpha <- guess * n
+  beta <- n - alpha
 
   if (verbose) {
     tmp_quantiles <- round(
@@ -355,10 +390,10 @@ add_prior_trend <- function(prob,
 #' Values of `alpha` closer to 0 imply a non-fluctating i.i.d. level component,
 #' while values of `alpha` closer to 1 imply a more random-walk-like behavior.
 #'
-#' @param alpha The `alpha` parameter of a Beta distribution, as `shape1` in
-#'   `dbeta()`. Must be larger than 0.
-#' @param beta The `beta` parameter of a Beta distribution, as `shape2` in
-#'   `dbeta()`. Must be larger than 0.
+#' @param guess Which \eqn{\alpha} parameter do you expect?
+#' @param n How much weight (n terms of observations) do you want to give your
+#'   prior assumption? The larger this value, the more data observations it will
+#'   take to wash out your prior distribution in case it is misspecified.
 #' @param priors A list containing other, already defined, priors. If not
 #'   provided, a list will be started with `level` as entry. Else, the
 #'   provided list will be extended with `level`.
@@ -379,13 +414,24 @@ add_prior_trend <- function(prob,
 #'
 #' print(ps)
 #'
-add_prior_level <- function(alpha, beta, priors = NULL, verbose = FALSE, plot = FALSE) {
+add_prior_level <- function(guess,
+                            n,
+                            priors = NULL,
+                            verbose = FALSE,
+                            plot = FALSE) {
 
-  checkmate::assert_numeric(x = alpha, lower = 0.00001, any.missing = FALSE, len = 1)
-  checkmate::assert_numeric(x = beta, lower = 0.00001, any.missing = FALSE, len = 1)
+  checkmate::assert_numeric(
+    x = n, lower = 0.00001, any.missing = FALSE, len = 1
+  )
+  checkmate::assert_numeric(
+    x = guess, lower = 1e-15, upper = 1 - 1e-15, any.missing = FALSE, len = 1
+  )
   checkmate::assert_list(x = priors, null.ok = TRUE)
   checkmate::assert_logical(x = verbose)
   checkmate::assert_logical(x = plot)
+
+  alpha <- guess * n
+  beta <- n - alpha
 
   if (verbose) {
     tmp_quantiles <- round(

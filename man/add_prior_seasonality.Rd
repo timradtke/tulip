@@ -6,8 +6,8 @@
 \usage{
 add_prior_seasonality(
   prob,
-  alpha,
-  beta,
+  guess,
+  n,
   priors = NULL,
   verbose = FALSE,
   plot = FALSE
@@ -18,11 +18,11 @@ add_prior_seasonality(
 therefore a seasonal component should be included in the model. This
 parameterizes a Bernoulli distribution and should thus be a value in (0,1).}
 
-\item{alpha}{The \code{alpha} parameter of a Beta distribution, as \code{shape1} in
-\code{dbeta()}. Must be larger than 0.}
+\item{guess}{Which \eqn{\gamma} parameter do you expect?}
 
-\item{beta}{The \code{beta} parameter of a Beta distribution, as \code{shape2} in
-\code{dbeta()}. Must be larger than 0.}
+\item{n}{How much weight (n terms of observations) do you want to give your
+prior assumption? The larger this value, the more data observations it will
+take to wash out your prior distribution in case it is misspecified.}
 
 \item{priors}{A list containing other, already defined, priors. If not
 provided, a list will be started with \code{seasonality} as entry. Else, the
@@ -49,7 +49,7 @@ If \code{alpha} is smaller or equal than 1, than the density will be highest at 
 }
 \examples{
 ps <- add_prior_seasonality(
-  prob = 0.75, alpha = 1, beta = 5, verbose = TRUE, plot = TRUE
+  prob = 0.75, n = 6, guess = 1/6, verbose = TRUE, plot = TRUE
 )
 
 print(ps)

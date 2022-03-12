@@ -4,25 +4,18 @@
 \alias{add_prior_trend}
 \title{Add a prior on the local-linear trend component}
 \usage{
-add_prior_trend(
-  prob,
-  alpha,
-  beta,
-  priors = NULL,
-  verbose = FALSE,
-  plot = FALSE
-)
+add_prior_trend(prob, guess, n, priors = NULL, verbose = FALSE, plot = FALSE)
 }
 \arguments{
 \item{prob}{Probability that the time series has a local-linear trend, and
 that therefore a trend component should be included in the model. This
 parameterizes a Bernoulli distribution and should thus be a value in (0,1).}
 
-\item{alpha}{The \code{alpha} parameter of a Beta distribution, as \code{shape1} in
-\code{dbeta()}. Must be larger than 0.}
+\item{guess}{Which \eqn{\alpha \cdot \beta} parameter do you expect?}
 
-\item{beta}{The \code{beta} parameter of a Beta distribution, as \code{shape2} in
-\code{dbeta()}. Must be larger than 0.}
+\item{n}{How much weight (n terms of observations) do you want to give your
+prior assumption? The larger this value, the more data observations it will
+take to wash out your prior distribution in case it is misspecified.}
 
 \item{priors}{A list containing other, already defined, priors. If not
 provided, a list will be started with \code{trend} as entry. Else, the

@@ -4,14 +4,14 @@
 \alias{add_prior_level}
 \title{Add a prior on the level component}
 \usage{
-add_prior_level(alpha, beta, priors = NULL, verbose = FALSE, plot = FALSE)
+add_prior_level(guess, n, priors = NULL, verbose = FALSE, plot = FALSE)
 }
 \arguments{
-\item{alpha}{The \code{alpha} parameter of a Beta distribution, as \code{shape1} in
-\code{dbeta()}. Must be larger than 0.}
+\item{guess}{Which \eqn{\alpha} parameter do you expect?}
 
-\item{beta}{The \code{beta} parameter of a Beta distribution, as \code{shape2} in
-\code{dbeta()}. Must be larger than 0.}
+\item{n}{How much weight (n terms of observations) do you want to give your
+prior assumption? The larger this value, the more data observations it will
+take to wash out your prior distribution in case it is misspecified.}
 
 \item{priors}{A list containing other, already defined, priors. If not
 provided, a list will be started with \code{level} as entry. Else, the
