@@ -40,8 +40,6 @@ Main characteristics of tulip are:
 - User-controllable parameter grid combined with custom penalized loss functions
 - Choice of "likelihood function" for the error component
 
-The implementation is based on a bunch of heuristics. Thus the name.
-
 ## Installation
 
 You can install the development version of tulip from [GitHub](https://github.com/) with:

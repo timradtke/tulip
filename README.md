@@ -29,8 +29,6 @@ Main characteristics of tulip are:
     functions
   - Choice of “likelihood function” for the error component
 
-The implementation is based on a bunch of heuristics. Thus the name.
-
 ## Installation
 
 You can install the development version of tulip from
@@ -188,12 +186,12 @@ ap_fit <- tulip(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.665 sec elapsed
+#> 1.778 sec elapsed
 
 tictoc::tic()
 ap_fc <- predict(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
-#> 0.116 sec elapsed
+#> 0.1 sec elapsed
 
 ap_fc$paths <- expm1(ap_fc$paths)
 ap_fc$model$y <- expm1(ap_fc$model$y)
