@@ -15,7 +15,7 @@
 #' @export
 initialize_states <- function(y,
                               m,
-                              shift_detection,
+                              shift_detection = FALSE,
                               window_size = 5,
                               seasonality_threshold = 0.5,
                               verbose = TRUE) {
@@ -23,6 +23,10 @@ initialize_states <- function(y,
   # See initialization described in Crevits R, Croux C., "Forecasting using
   # robust exponential smoothing with damped trend and seasonal components"
   # https://core.ac.uk/download/pdf/84933237.pdf
+
+  if (all(is.na(y))) {
+    stop("All observations of `y` are NA: No states can be initialized when the series is entirely missing.") # no lint
+  }
 
   x <- y
   y <- c(rep(NA, m), y)
@@ -32,7 +36,10 @@ initialize_states <- function(y,
   # more robust against outliers on observation 1 by using the median over the
   # first three values; this should be okay-ish even if there are a trend and
   # seasonal component
-  l <- rep(median(x[1:min(3, n_obs)]) - median(y, na.rm = TRUE), n_obs)
+  x_not_na_idx <- which(!is.na(x))
+  # construct the level from the first (up-to) three non-NA observations
+  l <- rep(median(x[x_not_na_idx[1:min(3, length(x_not_na_idx))]]) -
+             median(x, na.rm = TRUE), n_obs)
 
   # The trend is initialized as median of the median period-over-period changes;
   # for each i, get the standardized change compared to all other observations.
@@ -71,6 +78,9 @@ initialize_states <- function(y,
     )
 
     if (anyNA(s_1_to_m)) {
+      # this case occurs, for example, if every April observation of a monthly
+      # time series is missing
+      warning(sprintf("Cannot estimate seasonal initial state as at least one of the %s periods has no non-NA observation.", m)) # no lint
       s <- rep_len(0, length.out = n_obs)
     } else {
       s <- rep_len(s_1_to_m, length.out = n_obs)
@@ -78,8 +88,9 @@ initialize_states <- function(y,
       # set to zero if seasonal component is small compared to residual error;
       # use `mad()` as robust alternative for `sd()`; the seasonality is supposed
       # to explain at least 100*`seasonality_threshold`% of the residual variance
-      seasonality_size <- 1 - mad(x_remainder - s[-(1:m)])^2 / mad(x_remainder)^2
-      if (seasonality_size < seasonality_threshold) {
+      seasonality_size <- 1 - mad(x_remainder - s[-(1:m)], na.rm = TRUE)^2 /
+        mad(x_remainder, na.rm = TRUE)^2
+      if (isTRUE(seasonality_size < seasonality_threshold)) {
         s <- rep(0, length.out = n_obs)
       }
     }

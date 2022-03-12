@@ -1,5 +1,50 @@
 #' Fit a robust exponential smoothing model via grid search
 #'
+#' @param y A time series as numeric vector, may include NAs for some of the
+#'   observations
+#' @param m The time series' period length in number of observations (e.g., 12
+#'   for yearly seasonality with monthly observations, 1 for no seasonality, ...
+#'   ); does not handle multiple seasonality (e.g. weekly and yearly for daily
+#'   observations)
+#' @param family The distribution used to describe the error component; must be
+#'   one of `auto` (default), `norm`, `student`, or `cauchy`.
+#' @param param_grid Matrix defining the grid of parameters to be trialled
+#'   during grid search optimization; default parameter grid will be used if
+#'   left NULL. Can be created using `[initalize_param_grid()]`.
+#' @param priors List of priors on the models parameters; default priors will be
+#'   used if left NULL. Can be created using [add_prior_error()],
+#'   [add_prior_level()], [add_prior_seasonality()], [add_prior_trend()],
+#'   [add_prior_anomaly()]
+#' @param init_states List of initial states `l`, `b`, and `s` used to start
+#'   iterative smoothing of the time series for each set of the parameters in
+#'   the parameter grid. Default initialization via [initialize_states()] will
+#'   be used if left NULL.
+#' @param remove_anomalies Logical; during fitting, anomalies can be identified
+#'   and interpolated to not adversely affect the fitted states. The
+#'   interpolated values are only used to fit the states. When it comes to
+#'   estimating the error's standard deviation `sigma` and to measuring the
+#'   likelihood, interpolated values (i.e., fitted values) are compared against
+#'   the original "anomalies" so that robust distributions like Cauchy and
+#'   Student are correctly attributed a higher likelihood than the Normal
+#'   distribution and may be chosen to project the uncertainty due to anomalies
+#'   into the future. Default is `TRUE`.
+#' @param anomaly_budget Integerish (default 5); the number of anomalies that
+#'   can be interpolated during fitting of state components. It can be useful to
+#'   set a somewhat low hard limit on the number of possible interpolations as
+#'   some parameter grid combinations may be misspecified compared to the
+#'   "correct" data generating process and would therefore consider every
+#'   observation an anomaly.
+#' @param min_obs_anomaly_removal Integerish (default 12); the anomaly detection
+#'   relies on the fitted values' errors' standard deviation. The standard
+#'   deviation is iteratively updated as the state components are fitted from
+#'   the first observation to the last observation. This parameter defines after
+#'   which observation of the time series there are sufficiently many
+#'   observations available to reliably estimate the error's standard deviation
+#'   and thus determine whether an observation should be considered an anomaly.
+#'   The default of 12 is useful for monthly observations and not too low. But
+#'   it also implies that any anomaly in the first 12 observations will have
+#'   an impact on the estimated state components.
+#'
 #' @return An object of class `tulip`, a list with components:
 #' \describe{
 #'   \item{y_hat}{Fitted values}
@@ -43,7 +88,7 @@ tulip <- function(y,
                   anomaly_budget = 5,
                   min_obs_anomaly_removal = 12) {
 
-  checkmate::assert_numeric(x = y, any.missing = FALSE)
+  checkmate::assert_numeric(x = y, any.missing = TRUE, min.len = 1)
   checkmate::assert_integerish(
     x = m, any.missing = FALSE, null.ok = FALSE, len = 1, lower = 1
   )
@@ -78,10 +123,16 @@ tulip <- function(y,
   x <- y
   n_y <- length(y)
 
+  if (all(is.na(y))) {
+    warning("All observations in `y` are NA. Returning NA as forecast.")
+    return(default_object(y = y, y_hat = rep(NA, n_y), m = m,
+                          comment = "all_NA"))
+  }
+
   # standardize the input time series to make grid search, common initial states
   # by learning across time series easier
-  y_median <- median(x = y)
-  y_mad <- mad(x = y)
+  y_median <- median(x = y, na.rm = TRUE)
+  y_mad <- mad(x = y, na.rm = TRUE)
 
   if (length(y) == 1) {
     warning("The length of the provided `y` is 1. Returning `y` as forecast.")
@@ -169,7 +220,9 @@ tulip <- function(y,
   )
 
   opt_idx <- which.max(fitted_map$log_joint)
-  if (opt_idx > fitted_map$idx_wrap) {
+  if (length(opt_idx) == 0) {
+    stop("Failed to optimize the joint distribution. Does your time series include too many NAs, did you provide an empty `param_grid`?") # no lint
+  } else if (opt_idx > fitted_map$idx_wrap) {
     opt_idx_wrapped <- opt_idx %% fitted_map$idx_wrap
   } else {
     opt_idx_wrapped <- opt_idx

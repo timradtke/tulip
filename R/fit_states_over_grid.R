@@ -45,9 +45,13 @@ fit_states_over_grid <- function(y,
 
     ############################################################################
 
-    if (remove_anomalies &&
-        i > (m + min_obs_anomaly_removal) &&
-        any(anomaly_budget > 0)) {
+    if (all(is.na(y[i,]))) {
+      # treat missing values like anomalies but irrespective of anomaly budget
+      y[i,] <- y_hat[i,]
+      y_na[i,] <- NA
+    } else if (remove_anomalies &&
+               i > (m + min_obs_anomaly_removal) &&
+               any(anomaly_budget > 0)) {
       # overwrite actuals in case of outliers given errors so far;
       # start only when there are some errors available to compute the variance
       tmp_sigma <- sqrt(

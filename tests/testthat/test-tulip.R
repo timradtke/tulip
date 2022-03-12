@@ -6,6 +6,28 @@ test_that("tulip requires only arguments y and m", {
   expect_false(anyNA(tulip_object$param_grid))
 })
 
+test_that("tulip works if y is partly NA (case: m = 1)", {
+  y <- rnorm(n = 50, mean = 50)
+  y[c(1, 23:29, 41, 50)] <- NA
+  tulip_object <- tulip(y = y, m = 1)
+  expect_s3_class(object = tulip_object, class = "tulip")
+  expect_true(is.list(tulip_object))
+  expect_false(anyNA(tulip_object$param_grid))
+  expect_false(anyNA(tulip_object$y_hat))
+  expect_true(anyNA(tulip_object$y))
+})
+
+test_that("tulip works if y is partly NA (case: m = 12)", {
+  y <- rnorm(n = 50, mean = 50)
+  y[c(1, 23:29, 41, 50)] <- NA
+  tulip_object <- tulip(y = y, m = 12)
+  expect_s3_class(object = tulip_object, class = "tulip")
+  expect_true(is.list(tulip_object))
+  expect_false(anyNA(tulip_object$param_grid))
+  expect_false(anyNA(tulip_object$y_hat))
+  expect_true(anyNA(tulip_object$y))
+})
+
 test_that("tulip returns single_obs commment if y is single observation", {
   expect_warning(
     tulip_object <- tulip(y = rnorm(n = 1), m = 12),
@@ -16,6 +38,18 @@ test_that("tulip returns single_obs commment if y is single observation", {
   expect_identical(object = tulip_object$comment, expected = "single_obs")
   expect_identical(object = tulip_object$y_hat,
                    expected = tulip_object$y)
+})
+
+test_that("tulip returns all_NA commment if y is entirely NA", {
+  expect_warning(
+    tulip_object <- tulip(y = c(NA, NA, NA, NA, NA), m = 12),
+    regexp = "NA"
+  )
+  expect_s3_class(object = tulip_object, class = "tulip")
+  expect_true(!is.null(tulip_object$comment))
+  expect_identical(object = tulip_object$comment, expected = "all_NA")
+  expect_identical(object = tulip_object$y_hat,
+                   expected = rep(NA, 5))
 })
 
 test_that("tulip returns no_variance commment if y is constant", {

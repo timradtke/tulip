@@ -4,7 +4,7 @@
 \alias{autoplot.tulip_paths}
 \title{Autoplot method for \code{tulip_paths} objects}
 \usage{
-autoplot.tulip_paths(
+\method{autoplot}{tulip_paths}(
   object,
   ...,
   method = c("forecast", "paths")[1],

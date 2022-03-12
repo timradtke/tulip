@@ -48,7 +48,13 @@ fit_map <- function(param_grid,
                     y_hat,
                     n_cleaned) {
 
-  n_obs <- dim(y)[1]
+  checkmate::assert_matrix(x = y, min.rows = 1, min.cols = 1)
+  checkmate::assert_matrix(x = y_hat, nrows = nrow(y), ncols = ncol(y))
+
+  # errors can include NAs if y had NAs in the first place; while those are
+  # being interpolated in y_hat, we cannot compute errors at those locations.
+  # one could evaluate y_hat for those against a prior in the future.
+  n_obs <- dim(y)[1] - sum(is.na(y[,1]))
   errors <- y_hat - y
 
   l_smooth <- log_prior_smooth(
@@ -84,7 +90,7 @@ fit_map <- function(param_grid,
         scale = priors$error$scale
       )
     }
-    sigma_student <- fit_sigma(errors = errors, n_obs = n_obs, method = "student")
+    sigma_student <- fit_sigma(errors = errors, n_obs = n_obs, method = "student") # no lint
     l_sigma_student <- log_prior_sigma(priors = priors, sigma = sigma_norm)
     l_student <- log_lik_student(errors = errors, sigma = sigma_student, df = 5)
   }
@@ -105,7 +111,8 @@ fit_map <- function(param_grid,
     sigma <- sigma_student
     log_joint <- log_joint + l_sigma_student + l_student
   } else if (family == "auto") {
-    family_joint <- rep(c("norm", "cauchy", "student"), each = length(log_joint))
+    family_joint <- rep(c("norm", "cauchy", "student"),
+                        each = length(log_joint))
     sigma <- c(sigma_norm, sigma_cauchy, sigma_student)
     log_joint <- log_joint +
       c(l_sigma_norm, l_sigma_cauchy, l_sigma_student) +
@@ -208,15 +215,15 @@ fit_sigma <- function(errors,
     # Normal assuming mean is known (at 0)
 
     sigma_shape <- shape + n_obs / 2
-    sigma_scale <- ((shape * scale + n_obs * colSums(errors^2)) /
+    sigma_scale <- ((shape * scale + n_obs * colSums(errors^2, na.rm = TRUE)) /
                       (shape + n_obs)) / 2
 
     sigma <- sqrt(sigma_scale / sigma_shape)
   } else if (method == "cauchy") {
-    sigma <- apply(X = errors, MARGIN = 2, FUN = stats::IQR) / 2
+    sigma <- apply(X = errors, MARGIN = 2, FUN = stats::IQR, na.rm = TRUE) / 2
   } else if (method == "student") {
     #sigma <- apply(X = errors, MARGIN = 2, FUN = stats::IQR) / 2
-    sigma <- apply(X = errors, MARGIN = 2, FUN = stats::mad)
+    sigma <- apply(X = errors, MARGIN = 2, FUN = stats::mad, na.rm = TRUE)
   }
 
   return(sigma)
@@ -229,7 +236,8 @@ log_lik_cauchy <- function(errors, sigma) {
       location = 0,
       scale = rep(sigma, each = dim(errors)[1]),
       log = TRUE
-    )
+    ),
+    na.rm = TRUE
   )
 }
 
@@ -237,7 +245,8 @@ log_lik_norm <- function(errors, sigma) {
   colSums(
     dnorm(
       x = errors, mean = 0, sd = rep(sigma, each = dim(errors)[1]), log = TRUE
-    )
+    ),
+    na.rm = TRUE
   )
 }
 
@@ -253,6 +262,7 @@ log_lik_student <- function(errors, sigma, df) {
       x = scaled_errors,
       df = df,
       log = TRUE
-    )
+    ),
+    na.rm = TRUE
   )
 }

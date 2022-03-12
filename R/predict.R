@@ -84,6 +84,17 @@ predict.tulip <- function(object,
     x = n, any.missing = FALSE, null.ok = FALSE, len = 1
   )
 
+  if (isTRUE(object$comment == "all_NA")) {
+    return(
+      structure(
+        list(
+          paths = matrix(NA, ncol = n, nrow = h),
+          model = object
+        ),
+        class = c("tulip_paths", "matrix", "array")
+      )
+    )
+  }
   if (isTRUE(object$comment == "no_variance")) {
     return(
       structure(
@@ -126,7 +137,7 @@ predict.tulip <- function(object,
       switch_to_cauchy_if_outliers &&
       object$n_cleaned > 1 + ceiling(0.01 * length(object$x))) {
     family <- "cauchy"
-    object$sigma <- IQR(x = object$x_hat - object$x) / 2
+    object$sigma <- IQR(x = object$x_hat - object$x, na.rm = TRUE) / 2
   }
 
   # draw IID errors to be used when creating sample paths

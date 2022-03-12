@@ -4,7 +4,7 @@
 \alias{autoplot.tulip}
 \title{Autoplot method for \code{tulip} objects}
 \usage{
-autoplot.tulip(
+\method{autoplot}{tulip}(
   object,
   ...,
   method = c("components", "fitted")[1],

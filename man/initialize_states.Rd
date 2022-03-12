@@ -7,7 +7,7 @@
 initialize_states(
   y,
   m,
-  shift_detection,
+  shift_detection = FALSE,
   window_size = 5,
   seasonality_threshold = 0.5,
   verbose = TRUE
