@@ -1,10 +1,10 @@
-#' Autoplot method for `heuristika` objects
+#' Autoplot method for `tulip` objects
 #'
 #' Use `ggplot2` to visualize the components or fitted values of a fitted model
-#' of class `heuristika`
+#' of class `tulip`
 #'
-#' @param object Fitted model object of class `heuristika` returned by
-#'     [heuristika()]
+#' @param object Fitted model object of class `tulip` returned by
+#'     [tulip()]
 #' @param ... ignored
 #' @param method One of `components` for visualization of the level, trend, seasonal,
 #'     and error components of the fitted model (default), or `fitted` to
@@ -23,20 +23,20 @@
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
-#' fitted <- heuristika(y = y, m = 12, family = "norm")
+#' fitted <- tulip(y = y, m = 12, family = "norm")
 #'
 #' if (requireNamespace("ggplot2")) {
 #'   autoplot(object = fitted, method = "components")
 #'   autoplot(object = fitted, method = "fitted")
 #' }
 #'
-autoplot.heuristika <- function(object,
-                                ...,
-                                method = c("components", "fitted")[1],
-                                date = NULL,
-                                scales = c("free", "fixed")[1],
-                                show_anomalies = TRUE,
-                                show_params = TRUE) {
+autoplot.tulip <- function(object,
+                           ...,
+                           method = c("components", "fitted")[1],
+                           date = NULL,
+                           scales = c("free", "fixed")[1],
+                           show_anomalies = TRUE,
+                           show_params = TRUE) {
   checkmate::assert_choice(
     x = method,
     choices = c("components", "fitted"),
@@ -59,16 +59,16 @@ autoplot.heuristika <- function(object,
   }
 }
 
-#' Autoplot method for `heuristika_paths` objects
+#' Autoplot method for `tulip_paths` objects
 #'
 #' Use `ggplot2` to visualize the marginal forecast quantiles, or a few sample
-#' paths of a heuristika forecast object of class `heuristika_paths`
+#' paths of a tulip forecast object of class `tulip_paths`
 #'
 #' Note: This function will use [base::sample()] to randomly select paths that
 #' are added to the plot. Set a seed if you require reproducibility.
 #'
-#' @param object An object of class `heuristika_paths` as returned by
-#'     `[predict.heuristika()]`
+#' @param object An object of class `tulip_paths` as returned by
+#'     `[predict.tulip()]`
 #' @param ... ignored
 #' @param method One of `forecast` for visualization of quantiles of the
 #'     marginal forecast distribution (i.e., the usual fanchart), or `paths` to
@@ -88,14 +88,14 @@ autoplot.heuristika <- function(object,
 #'    plot, provided to [ggplot2::geom_point()] and [ggplot2::geom_line()]; used
 #'    when `method` is `"paths"`
 #'
-autoplot.heuristika_paths <- function(object,
-                                      ...,
-                                      method = c("forecast", "paths")[1],
-                                      date = NULL,
-                                      date_future = NULL,
-                                      show_params = TRUE,
-                                      n = 5,
-                                      alpha = 0.75) {
+autoplot.tulip_paths <- function(object,
+                                 ...,
+                                 method = c("forecast", "paths")[1],
+                                 date = NULL,
+                                 date_future = NULL,
+                                 show_params = TRUE,
+                                 n = 5,
+                                 alpha = 0.75) {
   checkmate::assert_choice(
     x = method,
     choices = c("forecast", "paths"),
@@ -120,13 +120,13 @@ autoplot.heuristika_paths <- function(object,
   }
 }
 
-#' Plot fitted values of an `heuristika` model
+#' Plot fitted values of an `tulip` model
 #'
 #' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
 #' is available will be checked when the function is run. `ggplot2` is only
 #' suggested, not a default import.
 #'
-#' @param object Fitted model object returned by [heuristika()]
+#' @param object Fitted model object returned by [tulip()]
 #' @param date Optional additional vector with dates in format that can be cast
 #'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
 #' @param show_anomalies Logical; when `TRUE` (default), observations that were
@@ -138,7 +138,7 @@ autoplot.heuristika_paths <- function(object,
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
-#' fitted <- heuristika(y = y, m = 12, family = "norm")
+#' fitted <- tulip(y = y, m = 12, family = "norm")
 #' plot_fitted(object = fitted)
 #'
 plot_fitted <- function(object,
@@ -225,13 +225,13 @@ plot_fitted <- function(object,
   return(ggp)
 }
 
-#' Plot scaled components of an `heuristika` model
+#' Plot scaled components of an `tulip` model
 #'
 #' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
 #' is available will be checked when the function is run. `ggplot2` is only
 #' suggested, not a default import.
 #'
-#' @param object Fitted model object returned by [heuristika()]
+#' @param object Fitted model object returned by [tulip()]
 #' @param date Optional additional vector with dates in format that can be cast
 #'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
 #' @param scales One of `free` or `fixed`, passed to the `scales` argument of
@@ -241,7 +241,7 @@ plot_fitted <- function(object,
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
-#' fitted <- heuristika(y = y, m = 12, family = "norm")
+#' fitted <- tulip(y = y, m = 12, family = "norm")
 #' plot_components(object = fitted)
 #'
 plot_components <- function(object,
@@ -336,7 +336,7 @@ plot_components <- function(object,
   return(ggp)
 }
 
-#' Plot a few forecast paths of a `heuristika` model
+#' Plot a few forecast paths of a `tulip` model
 #'
 #' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
 #' is available will be checked when the function is run. `ggplot2` is only
@@ -345,8 +345,8 @@ plot_components <- function(object,
 #' Note: This function will use [base::sample()] to randomly select paths that
 #' are added to the plot. Set a seed if you require reproducibility.
 #'
-#' @param object An object of class `heuristika_paths` as returned by
-#'     `predict.heuristika()`
+#' @param object An object of class `tulip_paths` as returned by
+#'     `predict.tulip()`
 #' @param date Optional additional vector with dates in format that can be cast
 #'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
 #' @param date_future Optional additional vector with dates in format that can
@@ -361,7 +361,7 @@ plot_components <- function(object,
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
-#' fitted <- heuristika(y = y, m = 12, family = "norm")
+#' fitted <- tulip(y = y, m = 12, family = "norm")
 #' paths <- predict(object = fitted, h = 12)
 #'
 #' plot_paths(object = paths, n = 3)
@@ -378,7 +378,7 @@ plot_paths <- function(object,
     )
   }
 
-  checkmate::assert_class(x = object, classes = "heuristika_paths")
+  checkmate::assert_class(x = object, classes = "tulip_paths")
 
   paths <- object$paths
   model <- object$model
@@ -467,14 +467,14 @@ plot_paths <- function(object,
   return(ggp)
 }
 
-#' Plot the marginal forecast of a `heuristika` model
+#' Plot the marginal forecast of a `tulip` model
 #'
 #' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
 #' is available will be checked when the function is run. `ggplot2` is only
 #' suggested, not a default import.
 #'
-#' @param object An object of class `heuristika_paths` as returned by
-#'     `predict.heuristika()`
+#' @param object An object of class `tulip_paths` as returned by
+#'     `predict.tulip()`
 #' @param date Optional additional vector with dates in format that can be cast
 #'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
 #' @param date_future Optional additional vector with dates in format that can
@@ -487,7 +487,7 @@ plot_paths <- function(object,
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
-#' fitted <- heuristika(y = y, m = 12, family = "norm")
+#' fitted <- tulip(y = y, m = 12, family = "norm")
 #' paths <- predict(object = fitted, h = 12)
 #'
 #' plot_forecast(object = fitted)
@@ -503,7 +503,7 @@ plot_forecast <- function(object,
     )
   }
 
-  checkmate::assert_class(x = object, classes = "heuristika_paths")
+  checkmate::assert_class(x = object, classes = "tulip_paths")
 
   paths <- object$paths
   model <- object$model

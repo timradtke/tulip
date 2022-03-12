@@ -66,8 +66,8 @@ s3_register <- function(generic, class, method = NULL) {
   # for R versions 3.6.0, and later, this is handled in NAMESPACE
   if (getRversion() < "3.6.0") {
     if (requireNamespace("ggplot2", quietly = TRUE)) {
-      s3_register("ggplot2::autoplot", "heuristika")
-      s3_register("ggplot2::autoplot", "heuristika_paths")
+      s3_register("ggplot2::autoplot", "tulip")
+      s3_register("ggplot2::autoplot", "tulip_paths")
     }
   }
 }

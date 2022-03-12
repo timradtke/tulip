@@ -1,6 +1,6 @@
 #' Fit a robust exponential smoothing model via grid search
 #'
-#' @return An object of class `heuristika`, a list with components:
+#' @return An object of class `tulip`, a list with components:
 #' \describe{
 #'   \item{y_hat}{Fitted values}
 #'   \item{y}{Input time series}
@@ -17,7 +17,7 @@
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
-#' ls_fit <- heuristika(y = y, m = 12, family = "norm")
+#' ls_fit <- tulip(y = y, m = 12, family = "norm")
 #'
 #' print(ls_fit$family)
 #' print(ls_fit$param_grid)
@@ -32,16 +32,16 @@
 #' points(ls_fit$x_cleaned * ls_fit$y_mad + ls_fit$y_median,
 #'        col = "orange", pch = 21)
 #'
-heuristika <- function(y,
-                       m,
-                       family = c("auto", "norm", "student", "cauchy")[1],
-                       param_grid = NULL,
-                       priors = NULL,
-                       init_states = NULL,
-                       seasonality_threshold = 0.5,
-                       remove_anomalies = TRUE,
-                       anomaly_budget = 5,
-                       min_obs_anomaly_removal = 12) {
+tulip <- function(y,
+                  m,
+                  family = c("auto", "norm", "student", "cauchy")[1],
+                  param_grid = NULL,
+                  priors = NULL,
+                  init_states = NULL,
+                  seasonality_threshold = 0.5,
+                  remove_anomalies = TRUE,
+                  anomaly_budget = 5,
+                  min_obs_anomaly_removal = 12) {
 
   checkmate::assert_numeric(x = y, any.missing = FALSE)
   checkmate::assert_integerish(
@@ -132,14 +132,14 @@ heuristika <- function(y,
   }
 
   if (is.null(priors)) {
-    priors <- add_prior_error(shape = 0.5, scale = 0.05)
+    priors <- add_prior_error(guess = 0.1, n = 1)
     priors <- add_prior_anomaly(prob = 1 / n_y, priors = priors)
-    priors <- add_prior_level(alpha = 1, beta = 7, priors = priors)
+    priors <- add_prior_level(guess = 1/8, n = 8, priors = priors)
     priors <- add_prior_trend(
-      prob = 0.75, alpha = 1, beta = 14, priors = priors
+      prob = 0.75, guess = 1/15, n = 15, priors = priors
     )
     priors <- add_prior_seasonality(
-      prob = 0.75, alpha = 1, beta = 5, priors = priors
+      prob = 0.75, guess = 1/6, n = 6, priors = priors
     )
   } else {
     checkmate::assert_names(
@@ -218,7 +218,7 @@ heuristika <- function(y,
     )
   )
 
-  class(fitted_model) <- "heuristika"
+  class(fitted_model) <- "tulip"
   return(fitted_model)
 }
 
@@ -255,7 +255,7 @@ default_object <- function(y, y_hat, m, comment) {
   )
 
   res$full <- res
-  class(res) <- "heuristika"
+  class(res) <- "tulip"
 
   return(res)
 }

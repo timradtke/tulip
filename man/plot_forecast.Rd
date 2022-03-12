@@ -2,13 +2,13 @@
 % Please edit documentation in R/autoplot.R
 \name{plot_forecast}
 \alias{plot_forecast}
-\title{Plot the marginal forecast of a \code{heuristika} model}
+\title{Plot the marginal forecast of a \code{tulip} model}
 \usage{
 plot_forecast(object, date = NULL, date_future = NULL, show_params = TRUE)
 }
 \arguments{
-\item{object}{An object of class \code{heuristika_paths} as returned by
-\code{predict.heuristika()}}
+\item{object}{An object of class \code{tulip_paths} as returned by
+\code{predict.tulip()}}
 
 \item{date}{Optional additional vector with dates in format that can be cast
 to \code{YYYY-MM-DD} with same length as \code{object$y}, used to create x-axis}
@@ -29,7 +29,7 @@ suggested, not a default import.
 set.seed(4278)
 y <- rt(100, df = 10) * 10 + 1:100
 
-fitted <- heuristika(y = y, m = 12, family = "norm")
+fitted <- tulip(y = y, m = 12, family = "norm")
 paths <- predict(object = fitted, h = 12)
 
 plot_forecast(object = fitted)

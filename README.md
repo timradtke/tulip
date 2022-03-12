@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# heuristika <img src="man/figures/logo.png" align="right" height="139" />
+# tulip <img src="man/figures/logo.svg" align="right" height="139" />
 
 <!-- badges: start -->
 
@@ -9,11 +9,11 @@
 
 **Version: 0.0.0.9000**
 
-The goal of heuristika is to provide a computationally and
-outlier-robust implementation of a subset of exponential smoothing-based
-models that allows for manual overwrites.
+The goal of tulip is to provide a computationally and outlier-robust
+implementation of a subset of exponential smoothing-based models that
+allows for manual overwrites.
 
-Main characteristics of heuristika are:
+Main characteristics of tulip are:
 
   - Lightweight with regard to dependencies
   - Computational robustness
@@ -33,12 +33,12 @@ The implementation is based on a bunch of heuristics. Thus the name.
 
 ## Installation
 
-You can install the development version of heuristika from
+You can install the development version of tulip from
 [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("timradtke/heuristika")
+devtools::install_github("timradtke/tulip")
 ```
 
 ## Example
@@ -76,20 +76,20 @@ for (i in 1:n) {
 y <- y + tmp_trend + tmp_season
 ```
 
-### Training a `heuristika` model
+### Training a `tulip` model
 
-A `heuristika` model can be fit against the series by additionally
-specifying the expected period length `m` of the seasonal component.
+A `tulip` model can be fit against the series by additionally specifying
+the expected period length `m` of the seasonal component.
 
 ``` r
-library(heuristika)
+library(tulip)
 
-fitted_model <- heuristika::heuristika(y = y, m = 12, family = "student")
+fitted_model <- tulip::tulip(y = y, m = 12, family = "student")
 ```
 
 We don’t import `ggplot2` by default, but if it is made available one
-can use its `autoplot` generic to visualize the fitted model as
-`heuristika` provides methods for its classes.
+can use its `autoplot` generic to visualize the fitted model as `tulip`
+provides methods for its classes.
 
 By default, `autoplot()` will show the fitted model’s components on the
 internal standardized scale:
@@ -119,7 +119,7 @@ autoplot(fitted_model, method = "fitted", date = dates)
 
 <img src="man/figures/README-autoplot_fitted_fitted-1.svg" width="100%" />
 
-### Forecasting with `heuristika`
+### Forecasting with `tulip`
 
 Just use `predict()` on the fitted model to generate sample paths from
 the forecast distribution:
@@ -128,8 +128,8 @@ the forecast distribution:
 forecast <- predict(object = fitted_model, h = 12, n = 10000)
 ```
 
-The returned `forecast` object has it’s own `heuristika_paths` class
-which can again be plotted using `autoplot()`:
+The returned `forecast` object has it’s own `tulip_paths` class which
+can again be plotted using `autoplot()`:
 
 ``` r
 autoplot(forecast, date = dates, date_future = dates_future)
@@ -137,8 +137,8 @@ autoplot(forecast, date = dates, date_future = dates_future)
 
 <img src="man/figures/README-autoplot_forecast_forecast-1.svg" width="100%" />
 
-Special about `heuristika` is that sample paths from the joint forecast
-distribution are the native output of `heuristika`s predict method–in
+Special about `tulip` is that sample paths from the joint forecast
+distribution are the native output of `tulip`s predict method–in
 contrast to, for example, the usual point forecasts or pre-aggregated
 quantiles.
 
@@ -184,16 +184,16 @@ air_passengers <- log1p(as.numeric(AirPassengers))
 ap_n <- length(air_passengers)
 
 tictoc::tic()
-ap_fit <- heuristika(
+ap_fit <- tulip(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.492 sec elapsed
+#> 1.665 sec elapsed
 
 tictoc::tic()
 ap_fc <- predict(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
-#> 0.153 sec elapsed
+#> 0.116 sec elapsed
 
 ap_fc$paths <- expm1(ap_fc$paths)
 ap_fc$model$y <- expm1(ap_fc$model$y)

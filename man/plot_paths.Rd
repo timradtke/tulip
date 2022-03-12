@@ -2,13 +2,13 @@
 % Please edit documentation in R/autoplot.R
 \name{plot_paths}
 \alias{plot_paths}
-\title{Plot a few forecast paths of a \code{heuristika} model}
+\title{Plot a few forecast paths of a \code{tulip} model}
 \usage{
 plot_paths(object, date = NULL, date_future = NULL, n = 5, alpha = 0.75)
 }
 \arguments{
-\item{object}{An object of class \code{heuristika_paths} as returned by
-\code{predict.heuristika()}}
+\item{object}{An object of class \code{tulip_paths} as returned by
+\code{predict.tulip()}}
 
 \item{date}{Optional additional vector with dates in format that can be cast
 to \code{YYYY-MM-DD} with same length as \code{object$y}, used to create x-axis}
@@ -36,7 +36,7 @@ are added to the plot. Set a seed if you require reproducibility.
 set.seed(4278)
 y <- rt(100, df = 10) * 10 + 1:100
 
-fitted <- heuristika(y = y, m = 12, family = "norm")
+fitted <- tulip(y = y, m = 12, family = "norm")
 paths <- predict(object = fitted, h = 12)
 
 plot_paths(object = paths, n = 3)

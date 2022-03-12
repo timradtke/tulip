@@ -2,12 +2,12 @@
 % Please edit documentation in R/autoplot.R
 \name{plot_components}
 \alias{plot_components}
-\title{Plot scaled components of an \code{heuristika} model}
+\title{Plot scaled components of an \code{tulip} model}
 \usage{
 plot_components(object, date = NULL, scales = c("free", "fixed")[1])
 }
 \arguments{
-\item{object}{Fitted model object returned by \code{\link[=heuristika]{heuristika()}}}
+\item{object}{Fitted model object returned by \code{\link[=tulip]{tulip()}}}
 
 \item{date}{Optional additional vector with dates in format that can be cast
 to \code{YYYY-MM-DD} with same length as \code{object$y}, used to create x-axis}
@@ -24,7 +24,7 @@ suggested, not a default import.
 set.seed(4278)
 y <- rt(100, df = 10) * 10 + 1:100
 
-fitted <- heuristika(y = y, m = 12, family = "norm")
+fitted <- tulip(y = y, m = 12, family = "norm")
 plot_components(object = fitted)
 
 }

@@ -11,8 +11,8 @@
 #' columns represents one sample path and is a random draw from the
 #' `h`-dimensional forecast distribution. See also examples below.
 #'
-#' @param object The fitted model object returned by [heuristika()] of class
-#'     `heuristika`.
+#' @param object The fitted model object returned by [tulip()] of class
+#'     `tulip`.
 #' @param h The forecast horizon as integer number of periods.
 #' @param n The integer number of sample paths to draw from the forecast
 #'     distribution.
@@ -23,7 +23,7 @@
 #'     from which sample paths are drawn instead. Default is `FALSE`.
 #' @param ... arguments passed to or from other methods.
 #'
-#' @seealso [heuristika()], [stats::predict()]
+#' @seealso [tulip()], [stats::predict()]
 #'
 #' @export
 #'
@@ -34,7 +34,7 @@
 #' # plot(y, type = "l", col = "grey", xlab = NA)
 #' # points(y, pch = 21, bg = "black", col = "white")
 #'
-#' ls_fit <- heuristika(y = y, m = 12, family = "norm")
+#' ls_fit <- tulip(y = y, m = 12, family = "norm")
 #'
 #' m_fc <- predict(object = ls_fit, h = 12, n = 10000)
 #'
@@ -63,13 +63,13 @@
 #' cor(m_fc[4, ], m_fc[6, ])
 #' cor(m_fc_shuffled[1, ], m_fc_shuffled[3, ])
 #'
-predict.heuristika <- function(object,
-                               h = 12,
-                               n = 10000,
-                               switch_to_cauchy_if_outliers = FALSE,
-                               ...) {
+predict.tulip <- function(object,
+                          h = 12,
+                          n = 10000,
+                          switch_to_cauchy_if_outliers = FALSE,
+                          ...) {
 
-  checkmate::assert_class(x = object, classes = "heuristika", null.ok = FALSE)
+  checkmate::assert_class(x = object, classes = "tulip", null.ok = FALSE)
   checkmate::assert_list(x = object, null.ok = TRUE)
   checkmate::assert_names(
     x = names(object),
@@ -91,7 +91,7 @@ predict.heuristika <- function(object,
           paths = matrix(unique(object$y), ncol = n, nrow = h),
           model = object
         ),
-        class = c("heuristika_paths", "matrix", "array")
+        class = c("tulip_paths", "matrix", "array")
       )
     )
   }
@@ -102,7 +102,7 @@ predict.heuristika <- function(object,
           paths = matrix(unique(object$y), ncol = n, nrow = h),
           model = object
         ),
-        class = c("heuristika_paths", "matrix", "array")
+        class = c("tulip_paths", "matrix", "array")
       )
     )
   }
@@ -115,7 +115,7 @@ predict.heuristika <- function(object,
                          ncol = n, nrow = h),
           model = object
         ),
-        class = c("heuristika_paths", "matrix", "array")
+        class = c("tulip_paths", "matrix", "array")
       )
     )
   }
@@ -233,7 +233,7 @@ predict.heuristika <- function(object,
       paths = y_orig,
       model = object
     ),
-    class = "heuristika_paths"
+    class = "tulip_paths"
   )
 
   return(result)

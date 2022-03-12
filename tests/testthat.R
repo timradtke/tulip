@@ -1,4 +1,4 @@
 library(testthat)
-library(heuristika)
+library(tulip)
 
-test_check("heuristika")
+test_check("tulip")
