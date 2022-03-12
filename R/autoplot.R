@@ -3,21 +3,20 @@
 #' Use `ggplot2` to visualize the components or fitted values of a fitted model
 #' of class `tulip`
 #'
-#' @param object Fitted model object of class `tulip` returned by
-#'     [tulip()]
+#' @param object Fitted model object of class `tulip` returned by [tulip()]
 #' @param ... ignored
-#' @param method One of `components` for visualization of the level, trend, seasonal,
-#'     and error components of the fitted model (default), or `fitted` to
-#'     visualize the fitted values in comparison to the input series
+#' @param method One of `components` for visualization of the level, trend,
+#'   seasonal, and error components of the fitted model (default), or `fitted`
+#'   to visualize the fitted values in comparison to the input series
 #' @param date Optional additional vector with dates in format that can be cast
-#'     to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
+#'   to `YYYY-MM-DD` with same length as `object$y`, used to create x-axis
 #' @param scales One of `free` or `fixed`, passed to the `scales` argument of
-#'     [ggplot2::facet_grid()]; used when `method` is `"components"`
+#'   [ggplot2::facet_grid()]; used when `method` is `"components"`
 #' @param show_anomalies Logical; when `TRUE` (default), observations that were
-#'     treated as anomalies during model fit will be marked in orange; used when
-#'     `method` is `"fitted"`
+#'   treated as anomalies during model fit will be marked in orange; used when
+#'   `method` is `"fitted"`
 #' @param show_params Logical; if `TRUE` (default) then fitted params will be
-#'     displayed using [ggplot2::facet_wrap()]; used when `method` is `"fitted"`
+#'   displayed using [ggplot2::facet_wrap()]; used when `method` is `"fitted"`
 #'
 #' @examples
 #' set.seed(4278)
@@ -185,7 +184,9 @@ plot_fitted <- function(object,
     params = paste0("alpha: ", round(object$param_grid[1], 4),
                     "; beta: ", round(object$param_grid[3], 4),
                     "; gamma: ", round(object$param_grid[5], 4),
-                    "; sigma: ", round(object$sigma, 4))
+                    "; sigma: ", round(object$sigma, 4),
+                    "; damped: ", round(1 - object$param_grid[3] -
+                                          object$param_grid[4], 4))
   )
 
   ggp <- ggplot2::ggplot(df, ggplot2::aes(x = date)) +
@@ -287,7 +288,12 @@ plot_components <- function(object,
     component = "4) Trend",
     date = date,
     value = object$b,
-    param = paste0("beta: ", round(object$param_grid["beta"], 4))
+    param = paste0(
+      "beta: ", round(object$param_grid["beta"], 4),
+      "\nDamped: ",
+      round(1 - object$param_grid["beta"] -
+              object$param_grid["one_minus_beta"], 4)
+    )
   )
 
   df_seasonal <- data.frame(
@@ -532,7 +538,9 @@ plot_forecast <- function(object,
   params <- paste0("alpha: ", round(model$param_grid[1], 4),
                    "; beta: ", round(model$param_grid[3], 4),
                    "; gamma: ", round(model$param_grid[5], 4),
-                   "; sigma: ", round(model$sigma, 2))
+                   "; sigma: ", round(model$sigma, 2),
+                   "; damped: ", round(1 - model$param_grid[3] -
+                                         model$param_grid[4], 4))
 
   df_input <- data.frame(
     date = date,

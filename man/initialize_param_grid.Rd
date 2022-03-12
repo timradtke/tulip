@@ -8,9 +8,10 @@ initialize_param_grid(
   n_alpha = 15,
   n_beta = 15,
   n_gamma = 15,
+  use_damped = TRUE,
   beta_smaller_than_alpha = TRUE,
   use_logistic = TRUE,
-  logistic_limit = 4
+  logistic_limit = 5
 )
 }
 \arguments{
@@ -19,6 +20,10 @@ initialize_param_grid(
 \item{n_beta}{Base number of \code{beta} candidate values}
 
 \item{n_gamma}{Base number of \code{gamma} candidate values}
+
+\item{use_damped}{Logical (default TRUE); should a damped trends be part of
+the parameter grid? This is implemented by subtracting value from the
+\code{one_minus_beta} parameter such that \code{beta + one_minus_beta < 1}.}
 
 \item{beta_smaller_than_alpha}{Logical; should \code{beta} be constrained to
 always be smaller than or equal to alpha?}
@@ -30,12 +35,13 @@ the base candidate values are distributed linearly between 0 and 1.}
 
 \item{logistic_limit}{Most extreme value provided into the logistic function;
 if \code{logistic_limit} is x, then the largest value trialed besides 1 is
-\code{1 / (1 + exp(-1 * logistic_limit))}. The default is 4, corresponding to
-a value of 0.982.}
+\code{1 / (1 + exp(-1 * logistic_limit))}. The default is 5, corresponding to
+a value of 0.9933.}
 }
 \description{
 Initialize a grid of paramaters to perform grid search over
 }
 \examples{
-initialize_param_grid()[1:10, ]
+head(initialize_param_grid(), 10)
+tail(initialize_param_grid(), 10)
 }

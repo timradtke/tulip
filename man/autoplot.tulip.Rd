@@ -15,14 +15,13 @@
 )
 }
 \arguments{
-\item{object}{Fitted model object of class \code{tulip} returned by
-\code{\link[=tulip]{tulip()}}}
+\item{object}{Fitted model object of class \code{tulip} returned by \code{\link[=tulip]{tulip()}}}
 
 \item{...}{ignored}
 
-\item{method}{One of \code{components} for visualization of the level, trend, seasonal,
-and error components of the fitted model (default), or \code{fitted} to
-visualize the fitted values in comparison to the input series}
+\item{method}{One of \code{components} for visualization of the level, trend,
+seasonal, and error components of the fitted model (default), or \code{fitted}
+to visualize the fitted values in comparison to the input series}
 
 \item{date}{Optional additional vector with dates in format that can be cast
 to \code{YYYY-MM-DD} with same length as \code{object$y}, used to create x-axis}
