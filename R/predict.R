@@ -189,7 +189,16 @@ predict.tulip <- function(object,
   # expand for (seasonal + forecast) x (sample paths)
   l <- matrix(rep(l, (m + h) * n), ncol = n)
   b <- matrix(rep(b, (m + h) * n), ncol = n)
-  s <- matrix(rep_len(s, length.out = (m + h) * n), ncol = n, byrow = FALSE)
+
+  s <- matrix(
+    # outer repeat to repeat `n` times for each sample path
+    rep_len(
+      # inner repeat to get `m + h` state vector that will be repeated `n` times
+      rep_len(s, length.out = (m + h)),
+      length.out = (m + h) * n
+    ),
+    ncol = n, byrow = FALSE
+  )
 
   y <- matrix(rep(NA, (m + h) * n), ncol = n)
   y_orig <- matrix(rep(NA, (m + h) * n), ncol = n)
