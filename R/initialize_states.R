@@ -2,23 +2,35 @@
 #'
 #' @param y Input time series to fit the model against
 #' @param m Scalar indicating the period length of the potential seasonality
-#' @param shift_detection Logical; should the automatic shift detection be run?
-#' @param window_size Integer defining the size of the windows used to detect
-#'     structural shifts in the time series; since we compare windows based on
-#'     the median of the trends in the window, odd values are easier to handle.
-#'     `window_size` limits how precise the trend shift can be identified. The
-#'     shift cannot be identified more precise than within a window of
-#'     `window_size` candidate values.
 #' @param seasonality_threshold Share of residual variance to be explained by
 #'     seasonal component at least if it is to be used
 #'
 #' @export
+#' @examples
+#' y <- as.numeric(AirPassengers[1:68])
+#' init_state <- initialize_states(y = y, m = 12, seasonality_threshold = 0.5)
+#'
+#' plot(-11:length(y), c(rep(NA, 12), y), pch = 19, cex = 0.5)
+#' lines(-11:length(y),
+#'       init_state$l + init_state$b*(-11:length(y)) + init_state$s)
+#'
+#' y <- as.numeric(RobStatTM::resex)
+#' init_state <- initialize_states(y = y, m = 12, seasonality_threshold = 0.5)
+#'
+#' plot(-11:length(y), c(rep(NA, 12), y), pch = 19, cex = 0.5)
+#' lines(-11:length(y),
+#'       init_state$l + init_state$b*(-11:length(y)) + init_state$s)
+#'
+#' init_state <- initialize_states(y = y, m = 12, init_window_length = 24)
+#'
+#' plot(-11:length(y), c(rep(NA, 12), y), pch = 19, cex = 0.5)
+#' lines(-11:length(y),
+#'       init_state$l + init_state$b*(-11:length(y)) + init_state$s)
+#'
 initialize_states <- function(y,
                               m,
-                              shift_detection = FALSE,
-                              window_size = 5,
                               seasonality_threshold = 0.5,
-                              verbose = TRUE) {
+                              init_window_length = 5) {
 
   # See initialization described in Crevits R, Croux C., "Forecasting using
   # robust exponential smoothing with damped trend and seasonal components"
@@ -29,42 +41,93 @@ initialize_states <- function(y,
   }
 
   x <- y
-  y <- c(rep(NA, m), y)
-  n_obs <- length(y)
+  n_obs <- length(x)
 
-  # Instead of initializing by the first observation, we try to make it a bit
-  # more robust against outliers on observation 1 by using the median over the
-  # first three values; this should be okay-ish even if there are a trend and
-  # seasonal component
-  x_not_na_idx <- which(!is.na(x))
-  # construct the level from the first (up-to) three non-NA observations
-  l <- rep(median(x[x_not_na_idx[1:min(3, length(x_not_na_idx))]]) -
-             median(x, na.rm = TRUE), n_obs)
+  # Derive global level and trend state using repeated median regression ----
+  rm_fit_global <- repeated_median_line(x = x)
 
-  # The trend is initialized as median of the median period-over-period changes;
-  # for each i, get the standardized change compared to all other observations.
-  # Then, the median of these changes is used as initial guess for the trend.
-  med_i_not_j <- rep(NA, n_obs)
-  for (i in 1:n_obs) {
-    med_i_not_j[i] <- median((y[i] - y[-i]) / (i - (1:n_obs)[-i]), na.rm = TRUE)
-  }
-  b <- rep(median(med_i_not_j, na.rm = TRUE), n_obs)
-  if (anyNA(b)) b <- rep(b, n_obs)
+  s <- initialize_season(
+    x = x,
+    x_remainder = rm_fit_global$residuals,
+    m = m,
+    n_obs = n_obs,
+    threshold = seasonality_threshold
+  )
 
-  shift_range <- c(NA, NA)
-  if (shift_detection && abs(unique(b)) > (1 / length(x))) {
-    shift_range <- detect_shift(
-      trends = na.omit(med_i_not_j),
-      window_size = window_size,
-      verbose = verbose
+  # Remove seasonal component, re-initialize global trend and season ----
+
+  rm_fit_global <- repeated_median_line(x = x - s)
+
+  fitted_global <- rm_fit_global$fitted + s
+  residuals_global <- x - fitted_global
+  anomaly_candidates <- abs(residuals_global) > 3 * mad(x = residuals_global)
+
+  # Remove seasonal component, re-initialize trend and level locally ----
+
+  x_idx <- 1:init_window_length
+  rm_fit_local <- repeated_median_line(x = x[x_idx] - s[x_idx])
+
+  l <- rep(rm_fit_local$intercept, n_obs + m)
+  b <- rep(rm_fit_local$slope, n_obs + m)
+  s <- rep(s[1:m], length.out = n_obs + m)
+
+  return(
+    list(
+      l = l,
+      b = b,
+      s = s,
+      l_global = rm_fit_global$intercept,
+      b_global = rm_fit_global$slope,
+      fitted_local = rm_fit_local$fitted + s[x_idx],
+      fitted_global = fitted_global,
+      anomaly_candidates = anomaly_candidates
+    )
+  )
+}
+
+
+#' @examples
+#' y <- as.numeric(RobStatTM::resex)
+#' y_idx <- 1:length(y)
+#' lm_fit <- lm(y ~ 1 + y_idx)
+#' rm_fit <- repeated_median_line(y)
+#' plot(y, pch = 19, cex = 0.5)
+#' abline(a = lm_fit$coefficients[1], b = lm_fit$coefficients[2], col = "darkblue")
+#' abline(a = rm_fit$intercept, b = rm_fit$slope, col = "darkorange")
+#'
+#' y <- 1:100 + rnorm(100)
+#' repeated_median_line(y)
+#'
+repeated_median_line <- function(x) {
+  n_obs <- length(x)
+
+  diffs <- rep(NA, n_obs)
+  x_idx <- 1:n_obs
+  for (j in 1:n_obs) {
+    diffs[j] <- median(
+      (x[-j] - x[j]) / (x_idx[-j] - x_idx[j]), na.rm = TRUE
     )
   }
+  slope <- median(diffs)
 
-  # remove level and trend before trying to identify the seasonality to not mix
-  # other signals into the seasonality
-  trend_idx <- 0:(length(x)-1)
-  x_remainder <- x - (unique(l) + unique(b) * trend_idx)
+  # Derive initial level state as y-intercept at time 0 ----
+  intercept <- median(x - slope * x_idx, na.rm = TRUE)
 
+  fitted <- intercept + slope * x_idx
+  residuals <- x - fitted
+
+  return(
+    list(
+      intercept = intercept,
+      slope = slope,
+      fitted = fitted,
+      residuals = residuals
+    )
+  )
+}
+
+initialize_season <- function(x, x_remainder, m, n_obs, threshold) {
+  # Derive initial seasonal state estimate using repeated medians ----
   s <- rep(0, length.out = n_obs)
   if (length(x) > (2 * m + 1) && m > 1) {
     s_1_to_m <- apply(
@@ -88,20 +151,17 @@ initialize_states <- function(y,
       # set to zero if seasonal component is small compared to residual error;
       # use `mad()` as robust alternative for `sd()`; the seasonality is supposed
       # to explain at least 100*`seasonality_threshold`% of the residual variance
-      seasonality_size <- 1 - mad(x_remainder - s[-(1:m)], na.rm = TRUE)^2 /
+      seasonality_size <- 1 - mad(x_remainder - s, na.rm = TRUE)^2 /
         mad(x_remainder, na.rm = TRUE)^2
-      if (isTRUE(seasonality_size < seasonality_threshold)) {
+      if (isTRUE(seasonality_size < threshold)) {
         s <- rep(0, length.out = n_obs)
       }
     }
   }
 
-  return(
-    list(
-      l = l,
-      b = b,
-      s = s,
-      shift_range = shift_range
-    )
-  )
+  # Sum of initial seasonal states should sum to 0 ----
+  s_std <- s - mean(s[1:m])
+
+  return(s_std)
 }
+
