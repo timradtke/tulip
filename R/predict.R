@@ -156,6 +156,12 @@ predict.tulip <- function(object,
       rt(n = h * n, df = 5) * object$sigma,
       ncol = n
     )
+  } else if (family == "bootstrap") {
+    residuals <- na.omit(object$x - object$x_hat)
+    m_e <- matrix(
+      sample(x = residuals, size = h * n, replace = TRUE),
+      ncol = n
+    )
   }
 
   m <- object$m
@@ -242,7 +248,7 @@ predict.tulip <- function(object,
   # drop the placeholders used for initial states
   y_orig <- y_orig[-(1:m), ]
 
-  if (family %in% c("norm", "cauchy", "student")) {
+  if (family %in% c("norm", "cauchy", "student", "bootstrap")) {
     y_orig <- y_orig * object$y_mad + object$y_median
   } else if (family == "nbinom") {
     y_orig <- expm1(y_orig)
