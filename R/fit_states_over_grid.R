@@ -165,7 +165,7 @@ classify_anomaly <- function(y, y_hat, threshold = 3) {
   }
 
   tmp_residuals <- y_hat[1:(n_obs - 1), , drop = FALSE] -
-    y_na[1:(n_obs - 1), , drop = FALSE]
+    y[1:(n_obs - 1), , drop = FALSE]
 
   tmp_sigma <- apply(
     tmp_residuals,

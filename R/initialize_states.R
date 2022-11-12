@@ -60,7 +60,8 @@ initialize_states <- function(y,
 
   fitted_global <- rm_fit_global$fitted + s
   residuals_global <- x - fitted_global
-  anomaly_candidates <- abs(residuals_global) > 3 * mad(x = residuals_global)
+  anomaly_candidates <- abs(residuals_global) >
+    3 * mad(x = residuals_global, na.rm = TRUE)
 
   # Remove seasonal component, re-initialize trend and level locally ----
 
@@ -108,7 +109,7 @@ repeated_median_line <- function(x) {
       (x[-j] - x[j]) / (x_idx[-j] - x_idx[j]), na.rm = TRUE
     )
   }
-  slope <- median(diffs)
+  slope <- median(diffs, na.rm = TRUE)
 
   # Derive initial level state as y-intercept at time 0 ----
   intercept <- median(x - slope * x_idx, na.rm = TRUE)

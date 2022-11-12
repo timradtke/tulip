@@ -237,7 +237,7 @@ test_that("tulip's speed did not regress", {
   # median is less than 0.66 seconds
   expect_true(median(mb_timing$time) / 1000000000 < 0.66)
 
-  skip()
+  skip(message = "Skipping the test on maximum run time.")
   # max is less than 1 second
   expect_true(max(mb_timing$time) / 1000000000 < 1.25)
 })
