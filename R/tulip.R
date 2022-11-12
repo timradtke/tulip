@@ -101,7 +101,9 @@ tulip <- function(y,
                   anomaly_budget_most_recent_k = 1,
                   min_obs_anomaly_removal = 12) {
 
-  checkmate::assert_numeric(x = y, any.missing = TRUE, min.len = 1)
+  checkmate::assert_numeric(
+    x = y, any.missing = TRUE, min.len = 1, null.ok = FALSE
+  )
   checkmate::assert_integerish(
     x = m, any.missing = FALSE, null.ok = FALSE, len = 1, lower = 1
   )
@@ -146,6 +148,8 @@ tulip <- function(y,
                           comment = "all_NA"))
   }
 
+  # Standardize Input Series ----
+
   # standardize the input time series to make grid search, common initial states
   # by learning across time series easier
   y_median <- median(x = y, na.rm = TRUE)
@@ -160,19 +164,19 @@ tulip <- function(y,
     return(default_object(y = y, y_hat = y, m = m, comment = "no_variance"))
   }
   if (isTRUE(y_mad < 0.0001)) {
-    warning("The MAD of y is 0, the series is constant for most observations. You might want to forecast it differently.") # no lint
+    warning("The MAD of y is 0, the series is constant for most observations. You might want to forecast it differently.") # nolint
     return(default_object(y = y, y_hat = rep(y_median, n_y), m = m,
                           comment = "mad_zero"))
   }
 
   y <- (y - y_median) / y_mad
 
+  # Initialize States of the Model ----
+
   if (is.null(init_states)) {
     init_states <- initialize_states(
       y = y,
       m = m,
-      shift_detection = FALSE, # hardcoded until no longer experimental
-      window_size = 5, # hardcoded until no longer experimental
       seasonality_threshold = seasonality_threshold
     )
   } else {
@@ -182,22 +186,22 @@ tulip <- function(y,
     )
   }
 
+  # Initialize Parameter Grid to Optimize Over ----
+
   if (is.null(param_grid)) {
     param_grid <- initialize_param_grid()
   } else {
     checkmate::assert_names(
       x = colnames(param_grid),
-      must.include = c("alpha", "beta", "gamma", "one_minus_alpha",
-                       "one_minus_beta", "one_minus_gamma")
+      identical.to = c("alpha", "one_minus_alpha",
+                       "beta", "one_minus_beta",
+                       "gamma", "one_minus_gamma")
     )
-
-    # ensure the expected order of columns, just in case
-    param_grid <- param_grid[, c("alpha", "one_minus_alpha",
-                                 "beta", "one_minus_beta",
-                                 "gamma", "one_minus_gamma"), drop = FALSE]
     checkmate::assert_true(all((rowSums(param_grid) - 3) < 0.001))
     checkmate::assert_true(all(param_grid <= 1 & param_grid >= 0))
   }
+
+  # Initialize Prior Distributions of Parameters ----
 
   if (is.null(priors)) {
     priors <- add_prior_error(guess = 0.1, n = 1)
@@ -216,16 +220,21 @@ tulip <- function(y,
     )
   }
 
+  # Fit States Over the Parameter Grid ----
+
   fitted_states <- fit_states_over_grid(
     y = y,
     m = m,
     init_states = init_states,
     param_grid = param_grid,
     remove_anomalies = remove_anomalies,
+    anomaly_candidates = init_states$anomaly_candidates,
     anomaly_budget = anomaly_budget,
     anomaly_budget_most_recent_k = anomaly_budget_most_recent_k,
     min_obs_anomaly_removal = min_obs_anomaly_removal
   )
+
+  # Find the Optimal Set of Parameters ----
 
   fitted_map <- fit_map(
     param_grid = param_grid,
@@ -237,41 +246,40 @@ tulip <- function(y,
     n_cleaned = fitted_states$n_cleaned
   )
 
-  opt_idx <- which.max(fitted_map$log_joint)
-  if (length(opt_idx) == 0) {
-    stop("Failed to optimize the joint distribution. Does your time series include too many NAs, did you provide an empty `param_grid`?") # no lint
-  } else if (opt_idx > fitted_map$idx_wrap) {
-    opt_idx_wrapped <- opt_idx %% fitted_map$idx_wrap
-  } else {
-    opt_idx_wrapped <- opt_idx
-  }
+  ls_opt_idx <- fn_get_optimal_param_idx(
+    log_joint = fitted_map$log_joint,
+    idx_wrap = fitted_map$idx_wrap
+  )
 
-  # back-transform the fitted values
-  x_hat <- fitted_states$y_hat[, opt_idx_wrapped] * y_mad + y_median
+  # Back-transform the Input Series ----
+
+  x_hat <- fitted_states$y_hat[, ls_opt_idx$wrapped] * y_mad + y_median
+
+  # Return Results ----
 
   fitted_model <- list(
     y_hat = x_hat,
     y = x,
     x = y,
-    x_hat = fitted_states$y_hat[, opt_idx_wrapped],
-    x_cleaned = fitted_states$y_cleaned[, opt_idx_wrapped],
-    n_cleaned = fitted_states$n_cleaned[opt_idx_wrapped],
-    x_na = fitted_states$y_na[, opt_idx_wrapped],
-    param_grid = param_grid[opt_idx_wrapped, ],
-    sigma = fitted_map$sigma[opt_idx],
-    l = fitted_states$l[, opt_idx_wrapped],
-    b = fitted_states$b[, opt_idx_wrapped],
-    s = fitted_states$s[, opt_idx_wrapped],
-    l_init = fitted_states$l_init[, opt_idx_wrapped],
-    b_init = fitted_states$b_init[, opt_idx_wrapped],
-    s_init = fitted_states$s_init[, opt_idx_wrapped],
+    x_hat = fitted_states$y_hat[, ls_opt_idx$wrapped],
+    x_cleaned = fitted_states$y_cleaned[, ls_opt_idx$wrapped],
+    n_cleaned = fitted_states$n_cleaned[ls_opt_idx$wrapped],
+    x_na = fitted_states$y_na[, ls_opt_idx$wrapped],
+    param_grid = param_grid[ls_opt_idx$wrapped, ],
+    sigma = fitted_map$sigma[ls_opt_idx$raw],
+    l = fitted_states$l[, ls_opt_idx$wrapped],
+    b = fitted_states$b[, ls_opt_idx$wrapped],
+    s = fitted_states$s[, ls_opt_idx$wrapped],
+    l_init = fitted_states$l_init[, ls_opt_idx$wrapped],
+    b_init = fitted_states$b_init[, ls_opt_idx$wrapped],
+    s_init = fitted_states$s_init[, ls_opt_idx$wrapped],
     shift_range = init_states$shift_range,
     y_median = y_median,
     y_mad = y_mad,
-    log_joint = fitted_map$log_joint[opt_idx],
-    family = fitted_map$family[opt_idx],
+    log_joint = fitted_map$log_joint[ls_opt_idx$raw],
+    family = fitted_map$family[ls_opt_idx$raw],
     m = m,
-    comment = NA,
+    comment = NA_character_,
     full = list(
       param_grid = param_grid,
       log_joint = fitted_map$log_joint,
@@ -293,11 +301,31 @@ tulip <- function(y,
   return(fitted_model)
 }
 
+#' Return an empty `tulip` object
+#'
+#' @param y A time series as numeric vector, may include NAs for some of the
+#'   observations
+#' @param y_hat Numeric vector of fitted values
+#' @param m The time series' period length in number of observations (e.g., 12
+#'   for yearly seasonality with monthly observations, 1 for no seasonality, ...
+#'   ); does not handle multiple seasonality (e.g. weekly and yearly for daily
+#'   observations)
+#' @param comment A string that can be used to describe non-standard return
+#'   cases
+#'
 default_object <- function(y, y_hat, m, comment) {
+  checkmate::assert_numeric(x = y, null.ok = FALSE)
+  checkmate::assert_numeric(x = y_hat, null.ok = FALSE)
+  checkmate::assert_integerish(
+    x = m, len = 1, lower = 1, any.missing = FALSE, null.ok = FALSE
+  )
+  checkmate::assert_string(x = comment, na.ok = TRUE, null.ok = FALSE)
+
   param_grid <- matrix(NA, ncol = 6, nrow = 1)
   colnames(param_grid) <- c(
-    "alpha", "one_minus_alpha", "beta", "one_minus_beta", "gamma",
-    "one_minus_gamma"
+    "alpha", "one_minus_alpha",
+    "beta", "one_minus_beta",
+    "gamma", "one_minus_gamma"
   )
 
   res <- list(
@@ -329,4 +357,85 @@ default_object <- function(y, y_hat, m, comment) {
   class(res) <- "tulip"
 
   return(res)
+}
+
+#' Get the index of parameters that optimize the log joint distribution
+#'
+#' Since we allow multiple `family`s to be evaluated at once with the same
+#' grid of parameter values, we first need to identify the 'raw' index that
+#' tells us the optimal `family` choice. Then we can within this family identify
+#' the 'wrapped' optimum index that gives the optimal `params` choice.
+#'
+#' When only a single `family` is evaluated, the 'raw' and 'wrapped' indices are
+#' the same.
+#'
+#' @param log_joint A vector of length `dim(param_grid)[1]` multiplied by the
+#'     number of evaluated `family`s
+#' @param idx_wrap The number of params (same for each `family`); used to
+#'     indicate at which index the `log_joint` repeats the parameters
+#'     for the next `family`
+#'
+#' @return A list of two scalar integers, named `raw` and `wrapped`
+#'
+#' @examples
+#' # let's say there are 5 parameter sets being evaluated
+#' log_joint_params <- rnorm(n = 5, sd = 5)
+#' idx_wrap <- length(log_joint_params)
+#'
+#' # we evaluate the parameter sets for three different family choices, which
+#' # creates 3 * 5 different sets of models to be evaluated
+#' log_joint <- c(
+#'   log_joint_params + rnorm(n = 1, sd = 5),
+#'   log_joint_params + rnorm(n = 1, sd = 5),
+#'   log_joint_params + rnorm(n = 1, sd = 5)
+#' )
+#'
+#' ls_opt_idx <- fn_get_optimal_param_idx(
+#'   log_joint = log_joint,
+#'   idx_wrap = idx_wrap
+#' )
+#'
+#' plot(x = 1:idx_wrap,
+#'      y = seq(-30, 30, length.out = idx_wrap),
+#'      type = "n", xlab = "idx", ylab = "log joint")
+#'
+#' for (i in 1:(length(log_joint) / idx_wrap)) {
+#'   lines(
+#'     x = 1:idx_wrap,
+#'     y = log_joint[(i*idx_wrap - 4):(i*idx_wrap)],
+#'     lty = i
+#'   )
+#' }
+#'
+#' points(ls_opt_idx$wrapped, log_joint[ls_opt_idx$raw], pch = 19)
+#'
+fn_get_optimal_param_idx <- function(log_joint, idx_wrap) {
+  checkmate::assert_numeric(
+    x = log_joint, min.len = 0, any.missing = FALSE, null.ok = FALSE
+  )
+  checkmate::assert_integerish(
+    x = idx_wrap, len = 1, lower = 1, any.missing = FALSE, null.ok = FALSE
+  )
+
+  if (length(log_joint) == 0) {
+    # this might occur even if the user specification is valid-ish
+    stop("Failed to optimize the joint distribution. Does your time series include too many NAs, or did you provide an empty `param_grid`?") # nolint
+  }
+  if (length(log_joint) %% idx_wrap != 0) {
+    # this should only occur if the package-internal code is misspecified
+    stop("`log_joint` must be a vector of length that is a multiple of `idx_wrap`.")
+  }
+
+  opt_idx <- which.max(log_joint)
+
+  if (opt_idx > idx_wrap) {
+    opt_idx_wrapped <- opt_idx %% idx_wrap
+    if (opt_idx_wrapped == 0) {
+      opt_idx_wrapped <- idx_wrap
+    }
+  } else {
+    opt_idx_wrapped <- opt_idx
+  }
+
+  return(list(raw = opt_idx, wrapped = opt_idx_wrapped))
 }
