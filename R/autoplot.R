@@ -173,7 +173,8 @@ plot_fitted <- function(object,
     date <- 1:length(object$y)
   }
 
-  anomalies <- ifelse(is.na(object$x_na), object$y, NA)
+  tmp_x <- ifelse(is.na(object$x), object$x_cleaned, object$x)
+  anomalies <- ifelse(object$x_cleaned != tmp_x, object$y, NA)
 
   df <- data.frame(
     date = date,
