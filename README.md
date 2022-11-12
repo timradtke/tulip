@@ -4,7 +4,6 @@
 # tulip <img src="man/figures/logo.svg" align="right" height="139" />
 
 <!-- badges: start -->
-
 <!-- badges: end -->
 
 **Version: 0.0.0.9000**
@@ -15,19 +14,19 @@ allows for manual overwrites.
 
 Main characteristics of tulip are:
 
-  - Lightweight with regard to dependencies
-  - Computational robustness
-  - Based on Exponential Smoothing models (additive trend, seasonality,
+-   Lightweight with regard to dependencies
+-   Computational robustness
+-   Based on Exponential Smoothing models (additive trend, seasonality,
     error)
-  - Forecasts via sample path generation
-  - User-controllable robust handling of “outliers” as part of model
+-   Forecasts via sample path generation
+-   User-controllable robust handling of “outliers” as part of model
     fitting
-  - User-controllable initial states that could be shared across time
+-   User-controllable initial states that could be shared across time
     series to share hierarchical information (possible due to
     standardization of time series)
-  - User-controllable parameter grid combined with custom penalized loss
+-   User-controllable parameter grid combined with custom penalized loss
     functions
-  - Choice of “likelihood function” for the error component
+-   Choice of “likelihood function” for the error component
 
 ## Installation
 
@@ -152,18 +151,18 @@ These are the five first forecast paths:
 ``` r
 round(forecast$paths[, 1:5], 1)
 #>        [,1]  [,2]  [,3]  [,4]  [,5]
-#>  [1,] 350.4 414.0 396.0 351.8 402.3
-#>  [2,] 371.8 402.6 309.2 410.5 380.2
-#>  [3,] 403.5 405.0 372.7 417.3 438.8
-#>  [4,] 467.6 460.2 436.0 461.2 415.3
-#>  [5,] 499.3 460.6 469.1 453.4 417.0
-#>  [6,] 500.4 414.6 557.5 332.3 406.5
-#>  [7,] 483.5 516.2 433.4 509.9 512.7
-#>  [8,] 459.7 489.1 471.4 426.9 438.5
-#>  [9,] 446.0 878.3 453.1 485.7 307.9
-#> [10,] 495.5 565.7 479.1 415.3 473.4
-#> [11,] 524.7 453.9 486.4 448.7 430.5
-#> [12,] 445.6 376.1 417.2 400.9 374.1
+#>  [1,] 331.1 408.7 386.7 332.8 394.4
+#>  [2,] 348.3 397.2 280.0 395.7 367.7
+#>  [3,] 375.1 391.8 333.2 398.9 427.4
+#>  [4,] 443.8 447.6 396.2 444.4 394.0
+#>  [5,] 484.3 446.6 434.2 434.3 386.4
+#>  [6,] 489.4 385.8 542.5 281.2 362.4
+#>  [7,] 469.2 494.8 404.2 469.0 477.7
+#>  [8,] 435.7 465.3 437.9 372.9 392.0
+#>  [9,] 411.7 939.0 412.4 435.2 224.5
+#> [10,] 459.3 621.2 433.8 347.4 392.0
+#> [11,] 503.6 494.0 449.4 384.8 350.7
+#> [12,] 425.2 392.5 377.5 335.3 289.3
 ```
 
 A random sample of five forecast paths can be plotted by choosing the
@@ -186,12 +185,12 @@ ap_fit <- tulip(
   y = air_passengers[1:(ap_n-12)], m = 12, family = "norm"
 )
 tictoc::toc()
-#> 1.22 sec elapsed
+#> 0.208 sec elapsed
 
 tictoc::tic()
 ap_fc <- predict(object = ap_fit, h = 12, n = 10000)
 tictoc::toc()
-#> 0.111 sec elapsed
+#> 0.136 sec elapsed
 
 ap_fc$paths <- expm1(ap_fc$paths)
 ap_fc$model$y <- expm1(ap_fc$model$y)
@@ -199,15 +198,90 @@ ap_fc$model$y <- expm1(ap_fc$model$y)
 
 <img src="man/figures/README-airpassengers_plot-1.svg" width="100%" />
 
+## Resex Data
+
+The Resex series (available in the `RobStatTM` package) is a good
+example of a series where outliers towards the end would usually lead to
+heavily distorted forecasts.
+
+``` r
+library(RobStatTM)
+#> 
+#> Attaching package: 'RobStatTM'
+#> The following object is masked from 'package:datasets':
+#> 
+#>     stackloss
+
+y <- resex[1:(length(resex)-5)]
+dates_resex <- seq(as.Date("1966-01-01"), as.Date("1972-12-01"), by = "month")
+dates_resex_future <- seq(as.Date("1973-01-01"), as.Date("1973-05-01"), by = "month")
+```
+
+``` r
+tictoc::tic()
+fitted_model <- tulip::tulip(
+  y = y,
+  m = 12,
+  family = "student",
+  anomaly_budget = 5
+  )
+tictoc::toc()
+#> 1.123 sec elapsed
+```
+
+The fitted values for the Resex series are:
+
+``` r
+autoplot(fitted_model, method = "fitted", date = dates_resex)
+```
+
+<img src="man/figures/README-resex_autoplot_fitted-1.svg" width="100%" />
+
+We can use bootstrap-based sample paths to derive prediction intervals:
+
+``` r
+fitted_model$family <- "bootstrap"
+
+forecast <- predict(
+  object = fitted_model,
+  h = 5,
+  n = 10000
+)
+```
+
+``` r
+autoplot(forecast, date = dates_resex, date_future = dates_resex_future) +
+  geom_point(
+    data = data.frame(date = dates_resex_future,
+                      value = resex[(length(resex)-4):length(resex)]),
+    mapping = aes(x = date, y = value), 
+    pch = 21, color = "white", fill = "darkorange"
+  )
+```
+
+<img src="man/figures/README-resex_autoplot_forecast-1.svg" width="100%" />
+
 ## References
 
 Michael Bohlke-Schneider, Shubham Kapoor, Tim Januschowski (2020).
 *Resilient Neural Forecasting Systems*.
 <https://www.amazon.science/publications/resilient-neural-forecasting-systems>
 
+Devon Barrow, Nikolaos Kourentzes, Rickard Sandberg, Jacek Niklewski
+(2020). *Automatic robust estimation for exponential smoothing:
+Perspectives from statistics and machine learning*.
+<https://doi.org/10.1016/j.eswa.2020.113637>
+
 Ruben Crevits and Christophe Croux (2017). *Forecasting using Robust
 Exponential Smoothing with Damped Trend and Seasonal Components*.
 <https://dx.doi.org/10.2139/ssrn.3068634>
+
+Roland Fried (2004). *Robust Filtering of Time Series with Trends*.
+<https://doi.org/10.1080/10485250410001656444>
+
+Sarah Gelper, Roland Fried, Cristophe Croux (2007). *Robust Forecasting
+with Exponential and Holt-Winters Smoothing*.
+<https://ssrn.com/abstract=1089493>
 
 Andrew C. Harvey (1990). *Forecasting, Structural Time Series Models and
 the Kalman Filter*. <https://doi.org/10.1017/CBO9781107049994>
@@ -235,6 +309,10 @@ Distributions of Walmart Sales*. <https://arxiv.org/abs/2111.14721>
 Steven L. Scott, Hal Varian (2013). *Predicting the Present with
 Bayesian Structural Time Series*.
 <https://research.google/pubs/pub41335>
+
+Qingsong Wen, Jingkun Gao, Xiaomin Song, Liang Sun, Huan Xu, Shenghuo
+Zhu (2018). *RobustSTL: A Robust Seasonal-Trend Decomposition Algorithm
+for Long Time Series*. <https://arxiv.org/abs/1812.01767>
 
 P. R. Winters (1960). *Forecasting Sales by Exponentially Weighted
 Moving Averages*. <https://doi.org/10.1287/mnsc.6.3.324>

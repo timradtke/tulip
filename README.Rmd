@@ -181,11 +181,68 @@ autoplot(ap_fc) +
              color = "white", fill = "darkorange")
 ```
 
+## Resex Data
+
+The Resex series (available in the `RobStatTM` package) is a good example of a series where outliers towards the end would usually lead to heavily distorted forecasts.
+
+```{r resex_data}
+library(RobStatTM)
+
+y <- resex[1:(length(resex)-5)]
+dates_resex <- seq(as.Date("1966-01-01"), as.Date("1972-12-01"), by = "month")
+dates_resex_future <- seq(as.Date("1973-01-01"), as.Date("1973-05-01"), by = "month")
+```
+
+```{r resex_fit}
+tictoc::tic()
+fitted_model <- tulip::tulip(
+  y = y,
+  m = 12,
+  family = "student",
+  anomaly_budget = 5
+  )
+tictoc::toc()
+```
+
+The fitted values for the Resex series are:
+
+```{r resex_autoplot_fitted}
+autoplot(fitted_model, method = "fitted", date = dates_resex)
+```
+
+We can use bootstrap-based sample paths to derive prediction intervals:
+
+```{r resex_predict}
+fitted_model$family <- "bootstrap"
+
+forecast <- predict(
+  object = fitted_model,
+  h = 5,
+  n = 10000
+)
+```
+
+```{r resex_autoplot_forecast}
+autoplot(forecast, date = dates_resex, date_future = dates_resex_future) +
+  geom_point(
+    data = data.frame(date = dates_resex_future,
+                      value = resex[(length(resex)-4):length(resex)]),
+    mapping = aes(x = date, y = value), 
+    pch = 21, color = "white", fill = "darkorange"
+  )
+```
+
 ## References
 
 Michael Bohlke-Schneider, Shubham Kapoor, Tim Januschowski (2020). *Resilient Neural Forecasting Systems*. https://www.amazon.science/publications/resilient-neural-forecasting-systems
 
+Devon Barrow, Nikolaos Kourentzes, Rickard Sandberg, Jacek Niklewski (2020). *Automatic robust estimation for exponential smoothing: Perspectives from statistics and machine learning*. https://doi.org/10.1016/j.eswa.2020.113637
+
 Ruben Crevits and Christophe Croux (2017). *Forecasting using Robust Exponential Smoothing with Damped Trend and Seasonal Components*. https://dx.doi.org/10.2139/ssrn.3068634
+
+Roland Fried (2004). *Robust Filtering of Time Series with Trends*. https://doi.org/10.1080/10485250410001656444
+
+Sarah Gelper, Roland Fried, Cristophe Croux (2007). *Robust Forecasting with Exponential and Holt-Winters Smoothing*. https://ssrn.com/abstract=1089493
 
 Andrew C. Harvey (1990). *Forecasting, Structural Time Series Models and the Kalman Filter*. https://doi.org/10.1017/CBO9781107049994
 
@@ -200,5 +257,7 @@ Edwin Ng, Zhishi Wang, Huigang Chen, Steve Yang, Slawek Smyl (2021). *Orbit: Pro
 Rafael de Rezende, Katharina Egert, Ignacio Marin, Guilherme Thompson (2021). *A White-boxed ISSM Approach to Estimate Uncertainty Distributions of Walmart Sales*. https://arxiv.org/abs/2111.14721
 
 Steven L. Scott, Hal Varian (2013). *Predicting the Present with Bayesian Structural Time Series*. https://research.google/pubs/pub41335
+
+Qingsong Wen, Jingkun Gao, Xiaomin Song, Liang Sun, Huan Xu, Shenghuo Zhu (2018). *RobustSTL: A Robust Seasonal-Trend Decomposition Algorithm for Long Time Series*. https://arxiv.org/abs/1812.01767
 
 P. R. Winters (1960). *Forecasting Sales by Exponentially Weighted Moving Averages*. https://doi.org/10.1287/mnsc.6.3.324
