@@ -21,11 +21,17 @@
 #' @examples
 #' head(initialize_param_grid(), 10)
 #' tail(initialize_param_grid(), 10)
+#'
+#' param_grid <- data.frame(initialize_param_grid())
+#' ggplot(param_grid, aes(x = alpha, y = beta, fill = gamma)) +
+#' geom_point(pch = 21, color = "white")
+#' geom_jitter(pch = 21, color = "white", width = 0.01, height = 0.01)
 initialize_param_grid <- function(n_alpha = 15,
                                   n_beta = 15,
                                   n_gamma = 15,
                                   use_damped = TRUE,
                                   beta_smaller_than_alpha = TRUE,
+                                  gamma_smaller_than_one_minus_alpha = TRUE,
                                   use_logistic = TRUE,
                                   logistic_limit = 5) {
 
@@ -52,7 +58,10 @@ initialize_param_grid <- function(n_alpha = 15,
   param_grid$one_minus_gamma <- 1 - param_grid$gamma
 
   if (beta_smaller_than_alpha) {
-    param_grid <- param_grid[param_grid$beta <= param_grid$alpha, ]
+    param_grid <- param_grid[param_grid$beta < param_grid$alpha, ]
+  }
+  if (gamma_smaller_than_one_minus_alpha) {
+    param_grid <- param_grid[param_grid$gamma < param_grid$one_minus_alpha, ]
   }
 
   tmp_grid_no_trend <- param_grid
