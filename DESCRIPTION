@@ -1,17 +1,32 @@
 Package: tulip
-Title: Robust Forecasting with Exponential Smoothing
+Title: Robust Probabilistic Forecasts to Tinker With
 Version: 0.0.0.9000
 Authors@R: 
     person("Tim", "Radtke", , "tim@timradtke.net", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: An implementation of robust exponential smoothing models that
+    produce probabilistic forecasts using sample paths. Handling of anomalies is
+    integrated into a custom maximum-a-posteriori fitting procedure that exposes
+    most aspects of the model to the user. Initial states can be provided to
+    start training from previous fits, transfer seasonality from other time
+    series. User-defined parameter grids and prior distributions restrict the
+    set of reasonable model choices to robust ones.
 License: MIT + file LICENSE
+URL: https://minimizeregret.com, https://github.com/timradtke/tulip
+BugReports: https://github.com/timradtke/tulip/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1
+Depends:
+    R (>= 4.0)
+Imports:
+    checkmate
 Suggests: 
     ggplot2,
     knitr,
     rmarkdown,
+    microbenchmark,
+    RobStatTM,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+LazyData: true

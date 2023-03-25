@@ -2,7 +2,7 @@
 % Please edit documentation in R/autoplot.R
 \name{plot_paths}
 \alias{plot_paths}
-\title{Plot a few forecast paths of a \code{tulip} model}
+\title{Plot a few forecast sample paths of a \code{tulip} model}
 \usage{
 plot_paths(object, date = NULL, date_future = NULL, n = 5, alpha = 0.75)
 }
@@ -24,9 +24,9 @@ able to see the individual paths; scalar integer between 1 and 10}
 plot, provided to \code{\link[ggplot2:geom_point]{ggplot2::geom_point()}} and \code{\link[ggplot2:geom_path]{ggplot2::geom_line()}}}
 }
 \description{
-This function requires the \link[ggplot2:ggplot2-package]{ggplot2}. Whether its namespace
-is available will be checked when the function is run. \code{ggplot2} is only
-suggested, not a default import.
+This function requires the \link[ggplot2:ggplot2-package]{ggplot2}. Whether its
+namespace is available will be checked when the function is run. \code{ggplot2} is
+only suggested, not a default import.
 }
 \details{
 Note: This function will use \code{\link[base:sample]{base::sample()}} to randomly select paths that
@@ -39,6 +39,7 @@ y <- rt(100, df = 10) * 10 + 1:100
 fitted <- tulip(y = y, m = 12, family = "norm")
 paths <- predict(object = fitted, h = 12)
 
-plot_paths(object = paths, n = 3)
+tulip:::plot_paths(object = paths, n = 3)
 
 }
+\keyword{internal}

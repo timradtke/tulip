@@ -7,10 +7,10 @@
 initialize_states(
   y,
   m,
-  shift_detection = FALSE,
-  window_size = 5,
+  method,
+  s = NULL,
   seasonality_threshold = 0.5,
-  verbose = TRUE
+  init_window_length = 5
 )
 }
 \arguments{
@@ -18,18 +18,93 @@ initialize_states(
 
 \item{m}{Scalar indicating the period length of the potential seasonality}
 
-\item{shift_detection}{Logical; should the automatic shift detection be run?}
+\item{method}{Are we using an \code{additive} or a \code{multiplicative} seasonal
+component?}
 
-\item{window_size}{Integer defining the size of the windows used to detect
-structural shifts in the time series; since we compare windows based on
-the median of the trends in the window, odd values are easier to handle.
-\code{window_size} limits how precise the trend shift can be identified. The
-shift cannot be identified more precise than within a window of
-\code{window_size} candidate values.}
+\item{s}{An optional numeric vector representing the initial seasonal state
+component. If provided, the the seasonal component is not derived
+automatically. Instead, the user-provided seasonal state is used, and the
+components \code{l} and \code{b} are derived given the user-provided \code{s}.
+The provided \code{s} must be of length \code{m + length(y)}, where
+the first \code{m} values are the states ahead of the observed time period of
+the time series \code{y}.}
 
-\item{seasonality_threshold}{Share of residual variance to be explained by
-seasonal component at least if it is to be used}
+\item{seasonality_threshold}{A value between 0 and 1; a seasonal component is
+not used when the seasonal component's reduction of variance in the
+residuals is less than the threshold}
+
+\item{init_window_length}{How many observations should be used to fit initial
+level and trend after the seasonal component was removed?
+Ideally, one uses few to let changes in state occur later via smoothing.
+But too few observations can lead to unrobust results.}
 }
 \description{
-Initialize state components given time series
+Perform a robust initialization of seasonal, local-linear trend, and level
+components given a suspected period length and the time series.
+}
+\details{
+A crucial component when fitting exponential smoothing models is the
+initialization of the model's state components (level, trend, seasonality).
+
+A poorly chosen initialization can prevent the model from adjusting neatly
+to the data. At the same time, finding a good initialization can be hard as
+one essentially has to already fit to the entire series to properly
+distinguish impacts from trend and seasonality. Initialization for time
+series is a chicken-and-egg problem. Standard methods can additionally be
+susceptible to anomalies.
+
+While \code{initialize_states()} can be applied by a user of the \code{tulip} package
+directly to find initial states to provide to the \code{\link[=tulip]{tulip()}} function's
+\code{init_states} argument, it will also be called internally by \code{\link[=tulip]{tulip()}} if no
+\code{init_states} are provided.
+
+Optionally, the seasonality component can be provided as \code{s}. The
+initialization problem then reduces to identifying the level and trend
+components \emph{given} the seasonal component. This way, a seasonal component
+can be transferred from a previously fitted, related time series, which is
+especially comfortable when the seasonality component is chosen to be
+multiplicative, via \code{method = "multiplicative"}.
+}
+\examples{
+y <- as.numeric(AirPassengers[1:68])
+init_state <- initialize_states(
+  y = y, m = 12, method = "multiplicative", seasonality_threshold = 0.5
+)
+
+plot(-11:length(y), c(rep(NA, 12), y), pch = 19, cex = 0.5)
+lines(-11:length(y),
+      (init_state$l + init_state$b*(-11:length(y))) * init_state$s)
+
+lines(1:length(y), init_state$fitted_global, col = "blue")
+lines(1:length(init_state$fitted_local),
+      init_state$fitted_local, col = "red")
+
+y <- tulip::flowers$flowers
+init_state <- initialize_states(y = y, m = 12, method = "multiplicative")
+
+plot(-11:length(y), c(rep(NA, 12), y), pch = 19, cex = 0.5)
+lines(-11:length(y),
+      (init_state$l + init_state$b*(-11:length(y))) * init_state$s)
+init_state <- initialize_states(y = y, m = 12, method = "additive")
+lines(-11:length(y),
+      init_state$l + init_state$b*(-11:length(y)) + init_state$s,
+      col = "red")
+
+init_state <- initialize_states(y = y, m = 12, method = "additive",
+                                init_window_length = 24)
+
+lines(-11:length(y),
+      init_state$l + init_state$b*(-11:length(y)) + init_state$s,
+      col = "blue")
+
+}
+\references{
+\describe{
+\item{Ruben Crevits and Christophe Croux (2017). \emph{Forecasting using Robust Exponential Smoothing with Damped Trend and Seasonal Components}.}{\url{https://dx.doi.org/10.2139/ssrn.3068634}}
+\item{Rob J. Hyndman, Anne B. Koehler, Ralph D. Snyder, and Simone Grose (2002). \emph{A State Space Framework for Automatic Forecasting using Exponential Smoothing Methods}.}{\url{https://doi.org/10.1016/S0169-2070(01)00110-8}}
+\item{Rafael de Rezende, Katharina Egert, Ignacio Marin, Guilherme Thompson (2021). \emph{A White-boxed ISSM Approach to Estimate Uncertainty Distributions of Walmart Sales}.}{\url{https://arxiv.org/abs/2111.14721}}
+}
+}
+\seealso{
+\code{\link[=tulip]{tulip()}}
 }

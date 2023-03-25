@@ -4,7 +4,7 @@
 \alias{autoplot.tulip}
 \title{Autoplot method for \code{tulip} objects}
 \usage{
-\method{autoplot}{tulip}(
+autoplot.tulip(
   object,
   ...,
   method = c("components", "fitted")[1],
@@ -39,16 +39,4 @@ displayed using \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}; used wh
 \description{
 Use \code{ggplot2} to visualize the components or fitted values of a fitted model
 of class \code{tulip}
-}
-\examples{
-set.seed(4278)
-y <- rt(100, df = 10) * 10 + 1:100
-
-fitted <- tulip(y = y, m = 12, family = "norm")
-
-if (requireNamespace("ggplot2")) {
-  autoplot(object = fitted, method = "components")
-  autoplot(object = fitted, method = "fitted")
-}
-
 }

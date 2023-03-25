@@ -4,7 +4,14 @@
 \alias{predict.tulip}
 \title{Forecast by drawing sample paths from a fitted object}
 \usage{
-\method{predict}{tulip}(object, h = 12, n = 10000, switch_to_cauchy_if_outliers = FALSE, ...)
+\method{predict}{tulip}(
+  object,
+  h = 12,
+  n = 10000,
+  switch_to_cauchy_if_outliers = FALSE,
+  postprocess_sample = identity,
+  ...
+)
 }
 \arguments{
 \item{object}{The fitted model object returned by \code{\link[=tulip]{tulip()}} of class
@@ -21,31 +28,98 @@ interpolated during fitting of the smoothing parameters, then the
 forecast distribution can automatically switch to a Cauchy distribution
 from which sample paths are drawn instead. Default is \code{FALSE}.}
 
+\item{postprocess_sample}{A function that is applied on a numeric vector of
+drawn samples for a single step-ahead before the samples are used to
+update the state of the model, and before outliers are removed
+(if applicable). By default equal to \code{identity()}, but could also
+be something like \code{function(x) pmax(x, 0)} to enforce a lower bound of 0,
+or any other transformation of interest. This works best with
+\code{family = "bootstrap"} when the applied transformation represents a
+feature of the data generating process that is non-Gaussian.
+Note that this can cause arbitrary errors caused by the author of the
+function provided to \code{postprocess_sample}.}
+
 \item{...}{arguments passed to or from other methods.}
 }
+\value{
+An object of class \code{tulip_paths} that is a list of:
+\describe{
+\item{paths}{A matrix of dimensions (\code{h}, \code{n}), in which each of the \code{n}
+columns represents one sample path over the \code{h}-steps-ahead}
+\item{model}{The provided model \code{object}}
+}
+}
 \description{
-Instead of generating a point forecast and marginal forecast intervals based
-on a Normal assumption and closed-from equations, we draw observations from
-the observation equation. The uncertainty is then represented via samples
-from the forecast distribution. This allows us to represent the distribution
-over multiple horizons instead of only the marginal distribution at
-individual horizons.
+Generate a forecast in the form of \code{n} sample paths for the forecast horizon
+\code{h} based on the fitted model \code{object}.
 }
 \details{
+The forecasts of a \code{tulip} model are natively represented by sample paths.
+Instead of providing a single point forecast, or marginal quantiles, possible
+future outcomes are summarized through samples from the joint distribution
+across future horizons. These samples can be summarized down to marginal
+quantiles, but they also contain the dependency between future horizons
+that is commonly lost by forecast frameworks that solely store marginal
+quantile forecasts.
+
+Depending on the chosen \code{family}, the samples are either based on a
+distribution that is fitted against the model's residuals during the fitting
+procedure; or they can be based directly on bootstrapped residuals if
+the \code{family} of the \code{tulip} object is overwritten to be \code{bootstrap}. In the
+latter case, the forecast distribution can represent asymmetries that were
+observed in the input data. You might \emph{not} want to use \code{bootstrap} when the
+input time series is very short. In such cases, a parametric assumption can
+help with more reasonable behavior of the error component.
+
+As for all exponential smoothing models, the one-step-ahead sample is fed
+back into the model to update the state components, before the two-step-ahead
+forecast sample is drawn given the updated state components. Through this
+mechanism, the temporal dependencies between samples of the same sample path
+are maintained. For example, if the initial sample is higher than average,
+the level and trend components of the model might update to be larger, thus
+consequently increasing chances that the next sample is again high (compared
+to the most recently observed training observation and level).
+
+If the model is able to represent the input data well, then sample paths look
+like reasonable future continuations of the input series. Averaging across
+sample paths one can derive quantiles of the forecast distribution.
+
+Importantly, because the sample paths maintain the temporal dependencies,
+one can also aggregate the forecasts \emph{across forecast horizons} which is not
+possible when only quantiles are returned by a model. The ability to
+summarize arbitrary aggregates can be helpful for optimization problems that
+use the forecast as input.
+
 The returned value is a matrix of dimensions \code{h} times \code{n}. Each of the \code{n}
 columns represents one sample path and is a random draw from the
 \code{h}-dimensional forecast distribution. See also examples below.
+
+Use the \code{postprocess_sample} argument to hook into the sampling process of
+the \code{predict()} method. Provide a function that is applied on the current
+j-step-ahead vector of samples \emph{before} it is fed back into the model, before
+the states are updated given those samples. This allows you to adjust the
+data generating process--for example, to enforce non-negative count samples--
+while doing so before the state components (level, trend, seasonality) of the
+model are updated given the most recent sample. This can prevent the model's
+level from drifting to zero, for example, because samples never became
+less than zero, thus affecting subsequent samples to drift even further below
+zero, and so on. Generated samples stay similar to the input data, allowing
+the forecast to stay similar to the input data.
 }
 \examples{
-set.seed(4278)
+fitted_model <- tulip(y = tulip::flowers$flowers, m = 12)
+forecast <- predict(object = fitted_model, h = 12, n = 10000)
 
-y <- rt(100, df = 10) * 10 + 1:100
-# plot(y, type = "l", col = "grey", xlab = NA)
-# points(y, pch = 21, bg = "black", col = "white")
+# library(ggplot2)
 
-ls_fit <- tulip(y = y, m = 12, family = "norm")
+# visualize the marginal quantile forecast
+# autoplot(forecast)
 
-m_fc <- predict(object = ls_fit, h = 12, n = 10000)
+# visualize a handful of sample paths directly
+# autoplot(forecast, method = "paths")
+
+# let's take a closer look at the sample paths themselves
+m_fc <- forecast$paths
 
 # summarize over draws (columns) to get point forecasts
 rowMeans(m_fc)
@@ -72,7 +146,38 @@ quantile(colSums(m_fc_shuffled), c(0.05, 0.5, 0.95))
 cor(m_fc[4, ], m_fc[6, ])
 cor(m_fc_shuffled[1, ], m_fc_shuffled[3, ])
 
+# -------------------
+
+# An example of how the `postprocess_sample` argument can be used to
+# enforce non-negative forecasts
+
+set.seed(7759)
+
+y <- rpois(n = 60, lambda = 1)
+
+ls_fit <- tulip(y = y, m = 12, family = "norm", method = "additive")
+ls_fit$family <- "bootstrap"
+
+m_fc <- predict(
+  object = ls_fit,
+  h = 12,
+  n = 10000,
+  postprocess_sample = function(x) pmax(0, x)
+)
+
+# library(ggplot2)
+# autoplot(m_fc)
+
+}
+\references{
+\describe{
+\item{Chapter 4.2 of: Syama Sundar Rangapuram, Matthias W. Seeger, Jan Gasthaus, Lorenzo Stella, Yuyang Wang, Tim Januschowski (2018). \emph{Deep State Space Models for Time Series Forecasting}.}{\url{https://papers.nips.cc/paper/2018/hash/5cf68969fb67aa6082363a6d4e6468e2-Abstract.html}}
+\item{Chapter 6.1, for example, of: Rob J. Hyndman, Anne B. Koehler, Ralph D. Snyder, and Simone Grose (2002). \emph{A State Space Framework for Automatic Forecasting using Exponential Smoothing Methods}.}{\url{https://doi.org/10.1016/S0169-2070(01)00110-8}}
+\item{Matthias Seeger, Syama Rangapuram, Yuyang Wang, David Salinas, Jan Gasthaus, Tim Januschowski, Valentin Flunkert (2017). \emph{Approximate Bayesian Inference in Linear State Space Models for Intermittent Demand Forecasting at Scale}.}{\url{https://arxiv.org/abs/1709.07638}}
+\item{Matthias Seeger, David Salinas, Valentin Flunkert (2016). \emph{Bayesian Intermittent Demand Forecasting for Large Inventories}.}{\url{https://proceedings.neurips.cc/paper/2016/file/03255088ed63354a54e0e5ed957e9008-Paper.pdf}}
+\item{Alexander Alexandrov, Konstantinos Benidis, Michael Bohlke-Schneider, Valentin Flunkert, Jan Gasthaus, Tim Januschowski, Danielle C. Maddix, Syama Rangapuram, David Salinas, Jasper Schulz, Lorenzo Stella, Ali Caner Türkmen, Yuyang Wang (2019). \emph{GluonTS: Probabilistic Time Series Models in Python}.}{\url{https://arxiv.org/abs/1906.05264}}
+}
 }
 \seealso{
-\code{\link[=tulip]{tulip()}}, \code{\link[stats:predict]{stats::predict()}}
+\code{\link[=tulip]{tulip()}}, \code{\link[=autoplot.tulip_paths]{autoplot.tulip_paths()}}, \code{\link[stats:predict]{stats::predict()}}
 }

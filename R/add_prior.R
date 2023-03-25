@@ -1,29 +1,28 @@
 #' Add a prior on the probability of an anomaly
 #'
+#' @param priors A list containing other, already defined, priors. If NULL, a
+#'   list will be started with `anomaly` as entry. Else, the provided list will
+#'   be extended with `anomaly`.
 #' @param prob The `prob` parameter for a Binomial distribution, as in
 #'   `dbinom()`. The corresponding `size` parameter of `dbinom` will be the
 #'   length of the time series.
-#' @param priors A list containing other, already defined, priors. If not
-#'   provided, a list will be started with `anomaly` as entry. Else, the
-#'   provided list will be extended with `anomaly`.
 #'
 #' @return A list that includes a list named `anomaly`, which is a list with a
 #'   `prob` key-value pair.
 #'
-#' @seealso `add_prior_trend()`, `add_prior_level()`, `add_prior_error()`,
-#'   `add_prior_seasonality()`
+#' @seealso [add_prior_trend()], [add_prior_level()], [add_prior_error()],
+#'   [add_prior_seasonality()]
 #'
 #' @export
 #' @examples
-#' ps <- list()
-#' ps <- add_prior_anomaly(prob = 0.01)
+#' ps <- add_prior_anomaly(priors = list(), prob = 0.01)
 #' print(ps)
 #'
 #' # overwrites the existing entry
-#' ps <- add_prior_anomaly(prob = 0.05)
+#' ps <- add_prior_anomaly(priors = ps, prob = 0.05)
 #' print(ps)
 #'
-add_prior_anomaly <- function(prob, priors = NULL) {
+add_prior_anomaly <- function(priors, prob) {
   checkmate::assert_numeric(x = prob, lower = 0, upper = 1, any.missing = FALSE, len = 1)
   checkmate::assert_list(x = priors, null.ok = TRUE)
 
@@ -41,7 +40,7 @@ add_prior_anomaly <- function(prob, priors = NULL) {
   return(priors)
 }
 
-#' Add a prior on the standard deviation of the error component
+#' Add a prior on the scale of the error component
 #'
 #' Defines a prior using an Inverse Gamma distribution on the variance of
 #' the unexplained error component of the model.
@@ -54,52 +53,55 @@ add_prior_anomaly <- function(prob, priors = NULL) {
 #' When thinking about this prior, frame your assumptions in terms of a sample
 #' of `n` observed errors with sample standard deviation `guess`.
 #'
+#' @param priors A list containing other, already defined, priors. If NULL, a
+#'   list will be started with `error` as entry. Else, the provided list will
+#'   be extended with `error`.
 #' @param guess Which standard deviation do you expect?
 #' @param n How much weight (n terms of observations) do you want to give your
 #'   prior assumption? The larger this value, the more data observations it will
 #'   take to wash out your prior distribution in case it is misspecified.
-#' @param priors A list containing other, already defined, priors. If not
-#'   provided, a list will be started with `error` as entry. Else, the
-#'   provided list will be extended with `error`.
 #' @param verbose Should summarizing information be printed using `message()`?
 #' @param plot Should a simple plot of the implied Inverse Gamma density be
 #'   drawn?
+#' @param show_sigma If `TRUE` (default), show the density on the scale of the
+#'   standard deviation instead of the variance.
 #'
 #' @return A list that includes a list named `error`, which is a list with
 #'   `shape` and `rate` key-value pairs.
 #'
-#' @seealso `add_prior_trend()`, `add_prior_level()`, `add_prior_seasonality()`,
-#'   `add_prior_anomaly()`
+#' @seealso [add_prior_trend()], [add_prior_level()], [add_prior_seasonality()],
+#'   [add_prior_anomaly()]
 #'
 #' @references
-#'   https://en.wikipedia.org/wiki/Inverse-gamma_distribution#Probability_density_function
+#'   \url{https://en.wikipedia.org/wiki/Inverse-gamma_distribution#Probability_density_function}
 #'
 #' @export
 #' @examples
-#' ps <- list()
-#' ps <- add_prior_error(n = 3, guess = 0.5)
+#' ps <- add_prior_error(priors = list(), n = 3, guess = 0.5)
 #' print(ps)
 #'
 #' # overwrites the existing entry
-#' ps <- add_prior_error(n = 3, guess = 0.5)
+#' ps <- add_prior_error(priors = ps, n = 3, guess = 0.5)
 #' print(ps)
 #'
 #' # print summary information
-#' add_prior_error(n = 3, guess = 0.5, verbose = TRUE)
+#' add_prior_error(priors = list(), n = 3, guess = 0.5, verbose = TRUE)
 #'
 #' # plot the implied density function with indicator for the mean
-#' add_prior_error(n = 3, guess = 0.5, plot = TRUE)
-#' add_prior_error(n = 2, guess = 0.5, plot = TRUE)
-#' add_prior_error(n = 3, guess = 2, plot = TRUE)
-#' add_prior_error(n = 1, guess = 1, plot = TRUE)
+#' add_prior_error(priors = list(), n = 3, guess = 0.5, plot = TRUE)
+#' add_prior_error(priors = list(), n = 2, guess = 0.5, plot = TRUE)
+#' add_prior_error(priors = list(), n = 3, guess = 2, plot = TRUE)
+#' add_prior_error(priors = list(), n = 1, guess = 1, plot = TRUE)
 #'
 #' # the prior might be easier to judge on the scale of the standard deviation
-#' add_prior_error(n = 1, guess = 0.5, plot = TRUE)
-#' add_prior_error(n = 1, guess = 0.5, plot = TRUE, show_sigma = TRUE)
+#' add_prior_error(priors = list(), n = 1, guess = 0.5, plot = TRUE,
+#'                 show_sigma = FALSE)
+#' add_prior_error(priors = list(), n = 1, guess = 0.5, plot = TRUE,
+#'                 show_sigma = TRUE)
 #'
-add_prior_error <- function(guess,
+add_prior_error <- function(priors,
+                            guess,
                             n,
-                            priors = NULL,
                             verbose = FALSE,
                             plot = FALSE,
                             show_sigma = TRUE) {
@@ -180,8 +182,11 @@ add_prior_error <- function(guess,
 #' make sense.
 #'
 #' The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
-#' If `alpha` is smaller or equal than 1, than the density will be highest at 0.
+#' If `alpha` is smaller or equal than 1, then the density will be highest at 0.
 #'
+#' @param priors A list containing other, already defined, priors. If NULL, a
+#'   list will be started with `seasonality` as entry. Else, the provided list
+#'   will be extended with `seasonality`.
 #' @param prob Probability that the time series has a seasonality, and that
 #'   therefore a seasonal component should be included in the model. This
 #'   parameterizes a Bernoulli distribution and should thus be a value in (0,1).
@@ -189,29 +194,26 @@ add_prior_error <- function(guess,
 #' @param n How much weight (n terms of observations) do you want to give your
 #'   prior assumption? The larger this value, the more data observations it will
 #'   take to wash out your prior distribution in case it is misspecified.
-#' @param priors A list containing other, already defined, priors. If not
-#'   provided, a list will be started with `seasonality` as entry. Else, the
-#'   provided list will be extended with `seasonality`.
 #' @param verbose Should summarizing information be printed using `message()`?
 #' @param plot Should a simple plot of the implied Beta density be drawn?
 #'
 #' @return A list that includes a list named `seasonality`, which is a list with
 #'   `prob`, `alpha`, and `beta` key-value pairs.
 #'
-#' @seealso `add_prior_trend()`, `add_prior_level()`, `add_prior_error()`,
-#'   `add_prior_anomaly()`
+#' @seealso [add_prior_trend()], [add_prior_level()], [add_prior_error()],
+#'   [add_prior_anomaly()]
 #'
 #' @export
 #' @examples
 #' ps <- add_prior_seasonality(
-#'   prob = 0.75, n = 6, guess = 1/6, verbose = TRUE, plot = TRUE
+#'   priors = NULL, prob = 0.75, n = 6, guess = 1/6, verbose = TRUE, plot = TRUE
 #' )
 #'
 #' print(ps)
-add_prior_seasonality <- function(prob,
+add_prior_seasonality <- function(priors,
+                                  prob,
                                   guess,
                                   n,
-                                  priors = NULL,
                                   verbose = FALSE,
                                   plot = FALSE) {
 
@@ -233,7 +235,7 @@ add_prior_seasonality <- function(prob,
 
   if (verbose) {
     tmp_quantiles <- round(
-      qbeta(c(0.05, 0.5, 0.95), shape1 = alpha, shape2 = beta), 2
+      stats::qbeta(c(0.05, 0.5, 0.95), shape1 = alpha, shape2 = beta), 2
     )
 
     message(
@@ -273,18 +275,26 @@ add_prior_seasonality <- function(prob,
 #' Add a prior on the local-linear trend component
 #'
 #' The Beta distribution defined via `alpha` and `beta` is the prior on the
-#' \eqn{\alpha} and \eqn{\beta} of the estimated model. For example, if we
-#' expect that the trend component should only update slowly over time and thus
-#' only use a small part of the error component, then a small `alpha` and larger
-#' `beta` make sense.
+#' product \eqn{\alpha \cdot \beta}, where \eqn{\alpha} and \eqn{\beta} are the
+#' smoothing parameters for the level and trend components of the model.
 #'
-#' Note: The trend component is updated via
-#' \eqn{\alpha \cdot \beta \cdot \epsilon_t}. The prior on \eqn{\beta} is
-#' implicitly defined via the `add_prior_level()` and `add_prior_trend()`.
+#' The trend component is updated via \eqn{\alpha \cdot \beta \cdot \epsilon_t}.
+#' When \eqn{\alpha=0}, then the trend component will not change over time
+#' because the level component does not adjust to recent observations of the
+#' time series. Every value of \eqn{\beta} then has the same effect.
+#'
+#' Specifying the prior directly on the interaction makes it easier to enforce
+#' an expected *effective* behavior of the trend. Independent of the value of
+#' \eqn{\alpha} (except for \eqn{\alpha = 0}), a small value for
+#' \eqn{\alpha \cdot \beta} implies that the trend will adjust slowly to more
+#' recent observations.
 #'
 #' The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
-#' If `alpha` is smaller or equal than 1, than the density will be highest at 0.
+#' If `alpha` is smaller or equal than 1, then the density will be highest at 0.
 #'
+#' @param priors A list containing other, already defined, priors. If NULL, a
+#'   list will be started with `trend` as entry. Else, the provided list
+#'   will be extended with `trend`.
 #' @param prob Probability that the time series has a local-linear trend, and
 #'   that therefore a trend component should be included in the model. This
 #'   parameterizes a Bernoulli distribution and should thus be a value in (0,1).
@@ -292,29 +302,31 @@ add_prior_seasonality <- function(prob,
 #' @param n How much weight (n terms of observations) do you want to give your
 #'   prior assumption? The larger this value, the more data observations it will
 #'   take to wash out your prior distribution in case it is misspecified.
-#' @param priors A list containing other, already defined, priors. If not
-#'   provided, a list will be started with `trend` as entry. Else, the
-#'   provided list will be extended with `trend`.
 #' @param verbose Should summarizing information be printed using `message()`?
 #' @param plot Should a simple plot of the implied Beta density be drawn?
 #'
 #' @return A list that includes a list named `trend`, which is a list with
 #'   `prob`, `alpha`, and `beta` key-value pairs.
 #'
-#' @seealso `add_prior_seasonality()`, `add_prior_level()`, `add_prior_error()`,
-#'   `add_prior_anomaly()`
+#' @seealso [add_prior_seasonality()], [add_prior_level()], [add_prior_error()],
+#'   [add_prior_anomaly()]
 #'
 #' @export
 #' @examples
 #' ps <- add_prior_trend(
-#'   prob = 0.75, alpha = 1, beta = 14, verbose = TRUE, plot = TRUE
+#'   priors = NULL,
+#'   prob = 0.75,
+#'   guess = 1/15,
+#'   n = 15,
+#'   verbose = TRUE,
+#'   plot = TRUE
 #' )
 #'
 #' print(ps)
-add_prior_trend <- function(prob,
+add_prior_trend <- function(priors = NULL,
+                            prob,
                             guess,
                             n,
-                            priors = NULL,
                             verbose = FALSE,
                             plot = FALSE) {
 
@@ -336,7 +348,7 @@ add_prior_trend <- function(prob,
 
   if (verbose) {
     tmp_quantiles <- round(
-      qbeta(c(0.05, 0.5, 0.95), shape1 = alpha, shape2 = beta), 2
+      stats::qbeta(c(0.05, 0.5, 0.95), shape1 = alpha, shape2 = beta), 2
     )
     message(
       sprintf(
@@ -385,38 +397,38 @@ add_prior_trend <- function(prob,
 #' is always used.
 #'
 #' The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
-#' If `alpha` is smaller or equal than 1, than the density will be highest at 0.
+#' If `alpha` is smaller or equal than 1, then the density will be highest at 0.
 #'
 #' Values of `alpha` closer to 0 imply a non-fluctating i.i.d. level component,
 #' while values of `alpha` closer to 1 imply a more random-walk-like behavior.
 #'
+#' @param priors A list containing other, already defined, priors. If NULL, a
+#'   list will be started with `level` as entry. Else, the provided list
+#'   will be extended with `level`.
 #' @param guess Which \eqn{\alpha} parameter do you expect?
 #' @param n How much weight (n terms of observations) do you want to give your
 #'   prior assumption? The larger this value, the more data observations it will
 #'   take to wash out your prior distribution in case it is misspecified.
-#' @param priors A list containing other, already defined, priors. If not
-#'   provided, a list will be started with `level` as entry. Else, the
-#'   provided list will be extended with `level`.
 #' @param verbose Should summarizing information be printed using `message()`?
 #' @param plot Should a simple plot of the implied Beta density be drawn?
 #'
 #' @return A list that includes a list named `level`, which is a list with
 #'   `prob`, `alpha`, and `beta` key-value pairs.
 #'
-#' @seealso `add_prior_seasonality()`, `add_prior_trend()`, `add_prior_error()`,
-#'   `add_prior_anomaly()`
+#' @seealso [add_prior_seasonality()], [add_prior_trend()], [add_prior_error()],
+#'   [add_prior_anomaly()]
 #'
 #' @export
 #' @examples
 #' ps <- add_prior_level(
-#'   alpha = 1, beta = 7, verbose = TRUE, plot = TRUE
+#'   priors = list(), guess = 1/7, n = 6, verbose = TRUE, plot = TRUE
 #' )
 #'
 #' print(ps)
 #'
-add_prior_level <- function(guess,
+add_prior_level <- function(priors = NULL,
+                            guess,
                             n,
-                            priors = NULL,
                             verbose = FALSE,
                             plot = FALSE) {
 
@@ -435,7 +447,7 @@ add_prior_level <- function(guess,
 
   if (verbose) {
     tmp_quantiles <- round(
-      qbeta(c(0.05, 0.5, 0.95), shape1 = alpha, shape2 = beta), 2
+      stats::qbeta(c(0.05, 0.5, 0.95), shape1 = alpha, shape2 = beta), 2
     )
     message(
       sprintf(
@@ -467,14 +479,14 @@ add_prior_level <- function(guess,
 plot_beta <- function(alpha, beta, xlab) {
   plot(
     x = seq(from = 0.0001, to = 0.9999, length.out = 1000),
-    y = dbeta(
+    y = stats::dbeta(
       x = seq(from = 0.0001, to = 0.9999, length.out = 1000),
       shape1 = alpha, shape2 = beta
     ),
     type = "l",
     xlab = xlab,
     ylab = ""
-  ); abline(v = 0.5, lty = 3)
+  ); graphics::abline(v = 0.5, lty = 3)
 }
 
 plot_invgamma <- function(shape,
@@ -504,9 +516,89 @@ plot_invgamma <- function(shape,
   if (shape > 1) {
     # add indicator for mean when it exists
     if (show_sigma) {
-      abline(v = sqrt(scale / (shape - 1)), lty = 3)
+      graphics::abline(v = sqrt(scale / (shape - 1)), lty = 3)
     } else {
-      abline(v = scale / (shape - 1), lty = 3)
+      graphics::abline(v = scale / (shape - 1), lty = 3)
     }
   }
+}
+
+test_prior_inv_gamma <- function(prior) {
+  checkmate::test_list(
+    x = prior, null.ok = FALSE
+  ) && checkmate::test_numeric(
+    x = prior$shape, len = 1, lower = 0, finite = TRUE,
+    any.missing = FALSE, null.ok = FALSE
+  ) && checkmate::test_numeric(
+    x = prior$scale, len = 1, lower = 0, finite = TRUE,
+    any.missing = FALSE, null.ok = FALSE
+  )
+}
+
+test_prior_beta <- function(prior) {
+  checkmate::test_list(
+    x = prior, null.ok = FALSE
+  ) && checkmate::test_numeric(
+    x = prior$alpha, len = 1, lower = 0, finite = TRUE,
+    any.missing = FALSE, null.ok = FALSE
+  ) && checkmate::test_numeric(
+    x = prior$beta, len = 1, lower = 0, finite = TRUE,
+    any.missing = FALSE, null.ok = FALSE
+  )
+}
+
+test_prior_bernoulli <- function(prior) {
+  checkmate::test_list(
+    x = prior, null.ok = FALSE
+  ) && checkmate::test_numeric(
+    x = prior$prob, len = 1, lower = 0, upper = 1,
+    any.missing = FALSE, null.ok = FALSE
+  )
+}
+
+stop_message_assert_prior <- function(name) {
+  sprintf(
+    "The provided `%s` prior does not match the expectations. Please compare `priors$%s` against the object returned by `add_prior_%s()`.", # nolint
+    name, name, name
+  )
+}
+
+assert_prior_error <- function(prior) {
+  test <- test_prior_inv_gamma(prior = prior)
+  if (!test) {
+    stop(stop_message_assert_prior(name = "error"))
+  }
+  return(invisible(test))
+}
+
+assert_prior_anomaly <- function(prior) {
+  test <- test_prior_bernoulli(prior = prior)
+  if (!test) {
+    stop(stop_message_assert_prior(name = "anomaly"))
+  }
+  return(invisible(test))
+}
+
+assert_prior_level <- function(prior) {
+  test <- test_prior_beta(prior = prior)
+  if (!test) {
+    stop(stop_message_assert_prior(name = "level"))
+  }
+  return(invisible(test))
+}
+
+assert_prior_trend <- function(prior) {
+  test <- test_prior_beta(prior = prior) && test_prior_bernoulli(prior = prior)
+  if (!test) {
+    stop(stop_message_assert_prior(name = "trend"))
+  }
+  return(invisible(test))
+}
+
+assert_prior_seasonality <- function(prior) {
+  test <- test_prior_beta(prior = prior) && test_prior_bernoulli(prior = prior)
+  if (!test) {
+    stop(stop_message_assert_prior(name = "seasonality"))
+  }
+  return(invisible(test))
 }

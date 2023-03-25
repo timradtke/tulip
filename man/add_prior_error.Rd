@@ -2,32 +2,35 @@
 % Please edit documentation in R/add_prior.R
 \name{add_prior_error}
 \alias{add_prior_error}
-\title{Add a prior on the standard deviation of the error component}
+\title{Add a prior on the scale of the error component}
 \usage{
 add_prior_error(
+  priors,
   guess,
   n,
-  priors = NULL,
   verbose = FALSE,
   plot = FALSE,
   show_sigma = TRUE
 )
 }
 \arguments{
+\item{priors}{A list containing other, already defined, priors. If NULL, a
+list will be started with \code{error} as entry. Else, the provided list will
+be extended with \code{error}.}
+
 \item{guess}{Which standard deviation do you expect?}
 
 \item{n}{How much weight (n terms of observations) do you want to give your
 prior assumption? The larger this value, the more data observations it will
 take to wash out your prior distribution in case it is misspecified.}
 
-\item{priors}{A list containing other, already defined, priors. If not
-provided, a list will be started with \code{error} as entry. Else, the
-provided list will be extended with \code{error}.}
-
 \item{verbose}{Should summarizing information be printed using \code{message()}?}
 
 \item{plot}{Should a simple plot of the implied Inverse Gamma density be
 drawn?}
+
+\item{show_sigma}{If \code{TRUE} (default), show the density on the scale of the
+standard deviation instead of the variance.}
 }
 \value{
 A list that includes a list named \code{error}, which is a list with
@@ -47,32 +50,33 @@ When thinking about this prior, frame your assumptions in terms of a sample
 of \code{n} observed errors with sample standard deviation \code{guess}.
 }
 \examples{
-ps <- list()
-ps <- add_prior_error(n = 3, guess = 0.5)
+ps <- add_prior_error(priors = list(), n = 3, guess = 0.5)
 print(ps)
 
 # overwrites the existing entry
-ps <- add_prior_error(n = 3, guess = 0.5)
+ps <- add_prior_error(priors = ps, n = 3, guess = 0.5)
 print(ps)
 
 # print summary information
-add_prior_error(n = 3, guess = 0.5, verbose = TRUE)
+add_prior_error(priors = list(), n = 3, guess = 0.5, verbose = TRUE)
 
 # plot the implied density function with indicator for the mean
-add_prior_error(n = 3, guess = 0.5, plot = TRUE)
-add_prior_error(n = 2, guess = 0.5, plot = TRUE)
-add_prior_error(n = 3, guess = 2, plot = TRUE)
-add_prior_error(n = 1, guess = 1, plot = TRUE)
+add_prior_error(priors = list(), n = 3, guess = 0.5, plot = TRUE)
+add_prior_error(priors = list(), n = 2, guess = 0.5, plot = TRUE)
+add_prior_error(priors = list(), n = 3, guess = 2, plot = TRUE)
+add_prior_error(priors = list(), n = 1, guess = 1, plot = TRUE)
 
 # the prior might be easier to judge on the scale of the standard deviation
-add_prior_error(n = 1, guess = 0.5, plot = TRUE)
-add_prior_error(n = 1, guess = 0.5, plot = TRUE, show_sigma = TRUE)
+add_prior_error(priors = list(), n = 1, guess = 0.5, plot = TRUE,
+                show_sigma = FALSE)
+add_prior_error(priors = list(), n = 1, guess = 0.5, plot = TRUE,
+                show_sigma = TRUE)
 
 }
 \references{
-https://en.wikipedia.org/wiki/Inverse-gamma_distribution#Probability_density_function
+\url{https://en.wikipedia.org/wiki/Inverse-gamma_distribution#Probability_density_function}
 }
 \seealso{
-\code{add_prior_trend()}, \code{add_prior_level()}, \code{add_prior_seasonality()},
-\code{add_prior_anomaly()}
+\code{\link[=add_prior_trend]{add_prior_trend()}}, \code{\link[=add_prior_level]{add_prior_level()}}, \code{\link[=add_prior_seasonality]{add_prior_seasonality()}},
+\code{\link[=add_prior_anomaly]{add_prior_anomaly()}}
 }

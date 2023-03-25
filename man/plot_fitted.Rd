@@ -19,15 +19,16 @@ treated as anomalies during model fit will be marked in orange}
 displayed using \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}}
 }
 \description{
-This function requires the \link[ggplot2:ggplot2-package]{ggplot2}. Whether its namespace
-is available will be checked when the function is run. \code{ggplot2} is only
-suggested, not a default import.
+This function requires the \link[ggplot2:ggplot2-package]{ggplot2}. Whether its
+namespace is available will be checked when the function is run. \code{ggplot2} is
+only suggested, not a default import.
 }
 \examples{
 set.seed(4278)
 y <- rt(100, df = 10) * 10 + 1:100
 
 fitted <- tulip(y = y, m = 12, family = "norm")
-plot_fitted(object = fitted)
+tulip:::plot_fitted(object = fitted)
 
 }
+\keyword{internal}

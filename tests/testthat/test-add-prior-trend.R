@@ -1,5 +1,6 @@
 test_that("add_prior_trend returns a list with required objects", {
   priors <- add_prior_trend(
+    priors = NULL,
     prob = 0.5,
     guess = 0.25,
     n = 4,
@@ -23,6 +24,7 @@ test_that("add_prior_trend returns explainer when verbose is TRUE", {
   suppressMessages(
     expect_message(
       add_prior_trend(
+        priors = NULL,
         prob = 0.5,
         guess = 0.25,
         n = 4,
@@ -66,6 +68,7 @@ test_that("add_prior_trend adds 'trend' list to existing list", {
 test_that("add_prior_trend fails when input is wrong", {
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 2,
       guess = 0.25,
       n = 4,
@@ -77,6 +80,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = -0.01,
       guess = 0.25,
       n = 4,
@@ -88,6 +92,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = 0,
       n = 4,
@@ -99,6 +104,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = c(0.5, 0.5),
       guess = 0.25,
       n = 4,
@@ -110,6 +116,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = c(0.25, 0.44),
       n = 4,
@@ -121,6 +128,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = c(1, 2),
@@ -132,6 +140,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = 0,
@@ -143,6 +152,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = -1,
       n = 4,
@@ -154,6 +164,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = -2,
@@ -165,6 +176,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = NA,
       guess = 0.25,
       n = 4,
@@ -176,6 +188,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = NA,
       n = 4,
@@ -187,6 +200,7 @@ test_that("add_prior_trend fails when input is wrong", {
 
   expect_error(
     add_prior_trend(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = NA,

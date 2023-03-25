@@ -4,16 +4,13 @@
 \alias{add_prior_seasonality}
 \title{Add a prior on the seasonal component}
 \usage{
-add_prior_seasonality(
-  prob,
-  guess,
-  n,
-  priors = NULL,
-  verbose = FALSE,
-  plot = FALSE
-)
+add_prior_seasonality(priors, prob, guess, n, verbose = FALSE, plot = FALSE)
 }
 \arguments{
+\item{priors}{A list containing other, already defined, priors. If NULL, a
+list will be started with \code{seasonality} as entry. Else, the provided list
+will be extended with \code{seasonality}.}
+
 \item{prob}{Probability that the time series has a seasonality, and that
 therefore a seasonal component should be included in the model. This
 parameterizes a Bernoulli distribution and should thus be a value in (0,1).}
@@ -23,10 +20,6 @@ parameterizes a Bernoulli distribution and should thus be a value in (0,1).}
 \item{n}{How much weight (n terms of observations) do you want to give your
 prior assumption? The larger this value, the more data observations it will
 take to wash out your prior distribution in case it is misspecified.}
-
-\item{priors}{A list containing other, already defined, priors. If not
-provided, a list will be started with \code{seasonality} as entry. Else, the
-provided list will be extended with \code{seasonality}.}
 
 \item{verbose}{Should summarizing information be printed using \code{message()}?}
 
@@ -45,16 +38,16 @@ make sense.
 }
 \details{
 The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
-If \code{alpha} is smaller or equal than 1, than the density will be highest at 0.
+If \code{alpha} is smaller or equal than 1, then the density will be highest at 0.
 }
 \examples{
 ps <- add_prior_seasonality(
-  prob = 0.75, n = 6, guess = 1/6, verbose = TRUE, plot = TRUE
+  priors = NULL, prob = 0.75, n = 6, guess = 1/6, verbose = TRUE, plot = TRUE
 )
 
 print(ps)
 }
 \seealso{
-\code{add_prior_trend()}, \code{add_prior_level()}, \code{add_prior_error()},
-\code{add_prior_anomaly()}
+\code{\link[=add_prior_trend]{add_prior_trend()}}, \code{\link[=add_prior_level]{add_prior_level()}}, \code{\link[=add_prior_error]{add_prior_error()}},
+\code{\link[=add_prior_anomaly]{add_prior_anomaly()}}
 }

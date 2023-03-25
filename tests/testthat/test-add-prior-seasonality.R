@@ -1,5 +1,6 @@
 test_that("add_prior_seasonality returns a list with required objects", {
   priors <- add_prior_seasonality(
+    priors = NULL,
     prob = 0.5,
     guess = 0.25,
     n = 4,
@@ -23,6 +24,7 @@ test_that("add_prior_seasonality returns explainer when verbose is TRUE", {
   suppressMessages(
     expect_message(
       add_prior_seasonality(
+        priors = NULL,
         prob = 0.5,
         guess = 0.33,
         n = 3,
@@ -66,6 +68,7 @@ test_that("add_prior_seasonality adds 'seasonality' list to existing list", {
 test_that("add_prior_seasonality fails when input is wrong", {
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 2,
       guess = 0.25,
       n = 4,
@@ -77,6 +80,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = -0.01,
       guess = 0.25,
       n = 4,
@@ -88,6 +92,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = 0,
       n = 2,
@@ -99,6 +104,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = 0,
@@ -110,6 +116,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = c(0.5, 0.5),
       guess = 0.25,
       n = 2,
@@ -121,6 +128,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = c(0.25, 0.33),
       n = 2,
@@ -132,6 +140,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = c(1, 2),
@@ -143,6 +152,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = -1,
       n = 2,
@@ -154,6 +164,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = -2,
@@ -165,6 +176,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = NA,
       guess = 0.25,
       n = 2,
@@ -176,6 +188,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = NA,
       n = 2,
@@ -187,6 +200,7 @@ test_that("add_prior_seasonality fails when input is wrong", {
 
   expect_error(
     add_prior_seasonality(
+      priors = NULL,
       prob = 0.5,
       guess = 0.25,
       n = NA,

@@ -29,7 +29,8 @@ test_that("prediction is equal to initial states combination when smoothers are 
     anomaly_candidates = 0,
     anomaly_budget = 0,
     anomaly_budget_most_recent_k = 0,
-    min_obs_anomaly_removal = 2 * m
+    min_obs_anomaly_removal = 2 * m,
+    method = "additive"
   )
 
   expect_equal(
@@ -56,7 +57,8 @@ test_that("random walk is possible based on param_grid choice", {
     anomaly_candidates = 0,
     anomaly_budget = 0,
     anomaly_budget_most_recent_k = 0,
-    min_obs_anomaly_removal = 2 * m
+    min_obs_anomaly_removal = 2 * m,
+    method = "additive"
   )
 
   expect_equal(
@@ -82,7 +84,8 @@ test_that("seasonal random walk forecast is possible based on param_grid choice"
       anomaly_candidates = 0,
       anomaly_budget = 0,
       anomaly_budget_most_recent_k = 0,
-      min_obs_anomaly_removal = 2 * m
+      min_obs_anomaly_removal = 2 * m,
+      method = "additive"
     )
 
     expect_equal(

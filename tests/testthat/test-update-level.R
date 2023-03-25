@@ -11,7 +11,8 @@ test_that("closer to y after update if no trend and season", {
     y = y,
     level_previous = level_previous,
     trend_previous = 0,
-    season_previous = 0
+    season_previous = 0,
+    method = "additive"
   )
 
   expect_true(
@@ -33,7 +34,8 @@ test_that("new level makes for better prediction than previous level", {
     y = y,
     level_previous = level_previous,
     trend_previous = trend_previous,
-    season_previous = season_previous
+    season_previous = season_previous,
+    method = "additive"
   )
 
   expect_true(all(
@@ -56,7 +58,8 @@ test_that("returns zero when both alpha and one_minus_alpha are zero", {
     y = y,
     level_previous = level_previous,
     trend_previous = trend_previous,
-    season_previous = season_previous
+    season_previous = season_previous,
+    method = "additive"
   )
 
   expect_true(all(

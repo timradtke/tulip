@@ -18,17 +18,6 @@
 #' @param show_params Logical; if `TRUE` (default) then fitted params will be
 #'   displayed using [ggplot2::facet_wrap()]; used when `method` is `"fitted"`
 #'
-#' @examples
-#' set.seed(4278)
-#' y <- rt(100, df = 10) * 10 + 1:100
-#'
-#' fitted <- tulip(y = y, m = 12, family = "norm")
-#'
-#' if (requireNamespace("ggplot2")) {
-#'   autoplot(object = fitted, method = "components")
-#'   autoplot(object = fitted, method = "fitted")
-#' }
-#'
 autoplot.tulip <- function(object,
                            ...,
                            method = c("components", "fitted")[1],
@@ -121,9 +110,9 @@ autoplot.tulip_paths <- function(object,
 
 #' Plot fitted values of an `tulip` model
 #'
-#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
-#' is available will be checked when the function is run. `ggplot2` is only
-#' suggested, not a default import.
+#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its
+#' namespace is available will be checked when the function is run. `ggplot2` is
+#' only suggested, not a default import.
 #'
 #' @param object Fitted model object returned by [tulip()]
 #' @param date Optional additional vector with dates in format that can be cast
@@ -133,12 +122,14 @@ autoplot.tulip_paths <- function(object,
 #' @param show_params Logical; if `TRUE` (default) then fitted params will be
 #'     displayed using [ggplot2::facet_wrap()]
 #'
+#' @keywords internal
+#'
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
 #' fitted <- tulip(y = y, m = 12, family = "norm")
-#' plot_fitted(object = fitted)
+#' tulip:::plot_fitted(object = fitted)
 #'
 plot_fitted <- function(object,
                         date = NULL,
@@ -173,15 +164,15 @@ plot_fitted <- function(object,
     date <- 1:length(object$y)
   }
 
-  tmp_x <- ifelse(is.na(object$x), object$x_cleaned, object$x)
-  anomalies <- ifelse(object$x_cleaned != tmp_x, object$y, NA)
+  tmp_y <- ifelse(is.na(object$y), object$y_cleaned, object$y)
+  anomalies <- ifelse(object$y_cleaned != tmp_y, object$y, NA)
 
   df <- data.frame(
     date = date,
     y = object$y,
     y_hat = object$y_hat,
     anomaly = anomalies,
-    family = paste0("Family: ", object$family),
+    family = paste0("Family: ", object$family, "; Method: ", object$method),
     params = paste0("alpha: ", round(object$param_grid[1], 4),
                     "; beta: ", round(object$param_grid[3], 4),
                     "; gamma: ", round(object$param_grid[5], 4),
@@ -227,11 +218,11 @@ plot_fitted <- function(object,
   return(ggp)
 }
 
-#' Plot scaled components of an `tulip` model
+#' Plot state components of an `tulip` model
 #'
-#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
-#' is available will be checked when the function is run. `ggplot2` is only
-#' suggested, not a default import.
+#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its
+#' namespace is available will be checked when the function is run. `ggplot2` is
+#' only suggested, not a default import.
 #'
 #' @param object Fitted model object returned by [tulip()]
 #' @param date Optional additional vector with dates in format that can be cast
@@ -239,12 +230,14 @@ plot_fitted <- function(object,
 #' @param scales One of `free` or `fixed`, passed to the `scales` argument of
 #'     [ggplot2::facet_grid()]
 #'
+#' @keywords internal
+#'
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
 #'
 #' fitted <- tulip(y = y, m = 12, family = "norm")
-#' plot_components(object = fitted)
+#' tulip:::plot_components(object = fitted)
 #'
 plot_components <- function(object,
                             date = NULL,
@@ -271,11 +264,10 @@ plot_components <- function(object,
   }
 
   df_input <- data.frame(
-    component = "1) Scaled Input",
+    component = "1) Input",
     date = date,
-    value = object$x,
-    param = paste0("Median: ", round(object$y_median, 2),
-                   "\nMAD: ", round(object$y_mad, 2))
+    value = object$y,
+    param = paste0("Observations: ", length(object$y))
   )
 
   df_level <- data.frame(
@@ -307,7 +299,7 @@ plot_components <- function(object,
   df_error <- data.frame(
     component = "2) Error",
     date = date,
-    value = object$x_hat - object$x,
+    value = object$y_hat - object$y,
     param = paste0("Family: ", object$family,
                    "\nsigma: ", round(object$sigma, 2))
   )
@@ -343,11 +335,11 @@ plot_components <- function(object,
   return(ggp)
 }
 
-#' Plot a few forecast paths of a `tulip` model
+#' Plot a few forecast sample paths of a `tulip` model
 #'
-#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
-#' is available will be checked when the function is run. `ggplot2` is only
-#' suggested, not a default import.
+#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its
+#' namespace is available will be checked when the function is run. `ggplot2` is
+#' only suggested, not a default import.
 #'
 #' Note: This function will use [base::sample()] to randomly select paths that
 #' are added to the plot. Set a seed if you require reproducibility.
@@ -364,6 +356,8 @@ plot_components <- function(object,
 #' @param alpha The transparency parameter used when adding the paths to the
 #'    plot, provided to [ggplot2::geom_point()] and [ggplot2::geom_line()]
 #'
+#' @keywords internal
+#'
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
@@ -371,7 +365,7 @@ plot_components <- function(object,
 #' fitted <- tulip(y = y, m = 12, family = "norm")
 #' paths <- predict(object = fitted, h = 12)
 #'
-#' plot_paths(object = paths, n = 3)
+#' tulip:::plot_paths(object = paths, n = 3)
 #'
 plot_paths <- function(object,
                        date = NULL,
@@ -474,11 +468,11 @@ plot_paths <- function(object,
   return(ggp)
 }
 
-#' Plot the marginal forecast of a `tulip` model
+#' Plot the marginal quantile forecast of a `tulip` model
 #'
-#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its namespace
-#' is available will be checked when the function is run. `ggplot2` is only
-#' suggested, not a default import.
+#' This function requires the [ggplot2][ggplot2::ggplot2-package]. Whether its
+#' namespace is available will be checked when the function is run. `ggplot2` is
+#' only suggested, not a default import.
 #'
 #' @param object An object of class `tulip_paths` as returned by
 #'     `predict.tulip()`
@@ -490,6 +484,8 @@ plot_paths <- function(object,
 #' @param show_params Logical; if `TRUE` (default) then fitted params will be
 #'     displayed using [ggplot2::facet_wrap()]
 #'
+#' @keywords internal
+#'
 #' @examples
 #' set.seed(4278)
 #' y <- rt(100, df = 10) * 10 + 1:100
@@ -497,7 +493,7 @@ plot_paths <- function(object,
 #' fitted <- tulip(y = y, m = 12, family = "norm")
 #' paths <- predict(object = fitted, h = 12)
 #'
-#' plot_forecast(object = fitted)
+#' tulip:::plot_forecast(object = paths)
 #'
 plot_forecast <- function(object,
                           date = NULL,
@@ -518,8 +514,16 @@ plot_forecast <- function(object,
   checkmate::assert_logical(
     x = show_params, len = 1, null.ok = FALSE, any.missing = FALSE
   )
-  checkmate::assert_matrix(x = paths, mode = "numeric")
+  checkmate::assert_matrix(x = paths, mode = "numeric", all.missing = FALSE)
   h <- dim(paths)[1]
+  n_paths <- dim(paths)[2]
+
+  if (anyNA(paths)) {
+    warning(paste0(
+      "Some of the object's sample paths contain NAs. The displayed quantiles will be based on less than ", # nolint
+      n_paths, " samples, using `na.rm = TRUE`."
+    ))
+  }
 
   checkmate::assert_date(
     x = date, len = length(model$y), null.ok = TRUE, any.missing = FALSE
@@ -536,6 +540,8 @@ plot_forecast <- function(object,
     date_label <- "Date"
   }
 
+  family <- paste0("Family: ", model$family, "; Method: ", model$method)
+
   params <- paste0("alpha: ", round(model$param_grid[1], 4),
                    "; beta: ", round(model$param_grid[3], 4),
                    "; gamma: ", round(model$param_grid[5], 4),
@@ -550,24 +556,24 @@ plot_forecast <- function(object,
 
   df_future <- data.frame(
     date = date_future,
-    y_hat_1l = apply(paths, 1, quantile, 0.5 / 12),
-    y_hat_2l = apply(paths, 1, quantile, 2 / 12),
-    y_hat_3l = apply(paths, 1, quantile, 3 / 12),
-    y_hat_median = apply(paths, 1, quantile, 0.5),
-    y_hat_3u = apply(paths, 1, quantile, 9 / 12),
-    y_hat_2u = apply(paths, 1, quantile, 10 / 12),
-    y_hat_1u = apply(paths, 1, quantile, 11.5 / 12)
+    y_hat_1l = apply(paths, 1, stats::quantile, 0.5 / 12, na.rm = TRUE),
+    y_hat_2l = apply(paths, 1, stats::quantile, 2 / 12, na.rm = TRUE),
+    y_hat_3l = apply(paths, 1, stats::quantile, 3 / 12, na.rm = TRUE),
+    y_hat_median = apply(paths, 1, stats::quantile, 0.5, na.rm = TRUE),
+    y_hat_3u = apply(paths, 1, stats::quantile, 9 / 12, na.rm = TRUE),
+    y_hat_2u = apply(paths, 1, stats::quantile, 10 / 12, na.rm = TRUE),
+    y_hat_1u = apply(paths, 1, stats::quantile, 11.5 / 12, na.rm = TRUE)
   )
 
   interval_text <- "Forecast intervals at 50%, 66%, and 92%."
   if (model$m == 12) {
     interval_text <- paste0(
       interval_text,
-      "\nThis corresponds to falling outside the interval for half of the year, once per quarter, once per year.") # no lint
+      "\nThis corresponds to falling outside the interval for half of the year, once per quarter, once per year.") # nolint
   }
 
-  df_input$family <- paste0("Family: ", model$family)
-  df_future$family <- paste0("Family: ", model$family)
+  df_input$family <- family
+  df_future$family <- family
   df_input$params <- params
   df_future$params <- params
 

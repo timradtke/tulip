@@ -10,7 +10,8 @@ test_that("adjusts towards y if level and trend are zero", {
     y = y,
     level_previous = 0,
     trend_previous = 0,
-    season_previous = season_previous
+    season_previous = season_previous,
+    method = "additive"
   )
 
   expect_true(all(
@@ -32,7 +33,8 @@ test_that("new season makes for better prediction than previous season", {
     y = y,
     level_previous = level_previous,
     trend_previous = trend_previous,
-    season_previous = season_previous
+    season_previous = season_previous,
+    method = "additive"
   )
 
   expect_true(all(
@@ -54,7 +56,8 @@ test_that("seasonal random walk (alpha=1) means season adjusts to current residu
     y = y,
     level_previous = level_previous,
     trend_previous = trend_previous,
-    season_previous = season_previous
+    season_previous = season_previous,
+    method = "additive"
   )
 
   expect_true(all(
@@ -75,7 +78,8 @@ test_that("fixed season (alpha=0) means season does not change", {
     y = y,
     level_previous = level_previous,
     trend_previous = trend_previous,
-    season_previous = season_previous
+    season_previous = season_previous,
+    method = "additive"
   )
 
   expect_true(all(

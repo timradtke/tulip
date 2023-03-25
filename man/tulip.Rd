@@ -2,12 +2,13 @@
 % Please edit documentation in R/tulip.R
 \name{tulip}
 \alias{tulip}
-\title{Fit a robust exponential smoothing model via grid search}
+\title{Fit a robust exponential smoothing model by maximum-a-posteriori estimation}
 \usage{
 tulip(
   y,
   m,
-  family = c("auto", "norm", "student", "cauchy")[1],
+  method = c("additive", "multiplicative")[1],
+  family = c("norm", "student", "cauchy")[1:2],
   param_grid = NULL,
   priors = NULL,
   init_states = NULL,
@@ -15,34 +16,59 @@ tulip(
   remove_anomalies = TRUE,
   anomaly_budget = 5,
   anomaly_budget_most_recent_k = 1,
-  min_obs_anomaly_removal = 12
+  min_obs_anomaly_removal = 12,
+  try_fixed_initial_fit = FALSE,
+  check_param_grid_unique = TRUE
 )
 }
 \arguments{
-\item{y}{A time series as numeric vector, may include NAs for some of the
-observations}
+\item{y}{A time series as numeric vector, may include NAs for some (but not
+all) of the observations}
 
-\item{m}{The time series' period length in number of observations (e.g., 12
-for yearly seasonality with monthly observations, 1 for no seasonality, ...
-); does not handle multiple seasonality (e.g. weekly and yearly for daily
-observations)}
+\item{m}{The time series' period length in number of observations (for
+example, 12 for yearly seasonality with monthly observations, 1 for no
+seasonality, ...); does not handle multiple seasonality (e.g. weekly and
+yearly for daily observations)}
+
+\item{method}{One of \code{additive} or \code{multiplicative}; determines whether the
+model uses an additive or multiplicative seasonal component. In the
+nomenclature of the \code{forecast} package, this corresponds to either the
+"AAA" model or the "AAM" model. The choice of \code{method} does not impact the
+level and trend components. Default is \code{additive}.
+The series \code{y} must be strictly positive when \code{method='multiplicative'} is
+chosen. Note that the \code{multiplicative} seasonality can be unstable when
+\code{y} is close to 0, especially for \code{y < 10}. You might want to switch to
+\code{additive} seasonality in such cases.}
 
 \item{family}{The distribution used to describe the error component; must be
-one of \code{auto} (default), \code{norm}, \code{student}, or \code{cauchy}.}
+one or multiple of \code{norm}, \code{student}, or \code{cauchy}. The fitting
+procedure is slower the more are chosen, and fastest for \code{norm}. Default is
+\code{c("norm", "student")} as \code{student} is a reliable choice when the noise is
+somewhat fat-tailed, while \code{cauchy} can go too far.}
 
 \item{param_grid}{Matrix defining the grid of parameters to be trialled
 during grid search optimization; default parameter grid will be used if
-left \code{NULL}. Can be created using \code{\link[=initialize_param_grid]{initialize_param_grid()}}.}
+left \code{NULL}. Can be created using \code{\link[=initialize_params_random]{initialize_params_random()}},
+\code{\link[=initialize_params_naive]{initialize_params_naive()}}, \code{\link[=initialize_params_grid]{initialize_params_grid()}}, or manually.}
 
 \item{priors}{List of priors on the models parameters; default priors will be
-used if left NULL. Can be created using \code{\link[=add_prior_error]{add_prior_error()}},
+used if left \code{NULL}. Can be created using \code{\link[=add_prior_error]{add_prior_error()}},
 \code{\link[=add_prior_level]{add_prior_level()}}, \code{\link[=add_prior_seasonality]{add_prior_seasonality()}}, \code{\link[=add_prior_trend]{add_prior_trend()}},
 \code{\link[=add_prior_anomaly]{add_prior_anomaly()}}}
 
 \item{init_states}{List of initial states \code{l}, \code{b}, and \code{s} used to start
 iterative smoothing of the time series for each set of the parameters in
 the parameter grid. Default initialization via \code{\link[=initialize_states]{initialize_states()}} will
-be used if left \code{NULL}.}
+be used if left \code{NULL}. If \code{s} is provided but not both \code{l} and \code{b},
+\code{s} will be used as initial seasonal component, and \code{\link[=initialize_states]{initialize_states()}}
+will initialize \code{l} and \code{b} \emph{given} the user-provided \code{s}.}
+
+\item{seasonality_threshold}{During initialization of states, only use a
+seasonal component if more than \code{seasonality_threshold} share of the
+overall variation of the time series is explained by the seasonal
+component. This doesn't quite correspond to the residual variance as
+the variation reduction is calculated based on robust measures.
+Reasonable values are somewhere between 0 and 1.}
 
 \item{remove_anomalies}{Logical; during fitting, anomalies can be identified
 and interpolated to not adversely affect the fitted states. The
@@ -84,41 +110,101 @@ and thus determine whether an observation should be considered an anomaly.
 The default of 12 is useful for monthly observations and not too low. But
 it also implies that any anomaly in the first 12 observations will have
 an impact on the estimated state components.}
+
+\item{try_fixed_initial_fit}{Logical (default \code{FALSE}); should the initial
+\emph{global} fit provided via \code{init_states} / \code{\link[=initialize_states]{initialize_states()}}
+be evaluated alongside the smoothed model fits? This will evaluate the fit
+corresponding to \code{init_states$l_global}, \code{init_states$b_global}, and
+\code{init_states$s}, resulting in fitted values \code{init_states$fitted_global}.
+In contrast, the normal smoothed model fits rely on \code{init_states$l},
+\code{init_states$b}, and \code{init_states$s}.}
+
+\item{check_param_grid_unique}{Logical (default \code{TRUE}); should \code{tulip}
+check that the provided \code{param_grid} rows are distinct (and remove
+duplicates otherwise)? Turn off to avoid computation if you know your
+\code{param_grid} has only distinct rows.}
 }
 \value{
 An object of class \code{tulip}, a list with components:
 \describe{
-\item{y_hat}{Fitted values}
+\item{y_hat}{Fitted values, numeric vector of same length as \code{y}}
 \item{y}{Input time series}
-\item{x_hat}{Fitted values on standardized scale}
-\item{x}{Input time series on standardized scale}
+\item{y_cleaned}{Copy of the input time series that is used to update
+the state components during model fitting. The copy is
+used to achieve update behavior specific to the states
+when dealing with missing values and anomalies. In
+contrast to \code{y}, missing values and anomalies are replaced
+to update the states in robust ways. Note that the update
+behavior for \code{sigma} may differ, see also \code{y_na}.}
+\item{n_cleaned}{Number of cleaned observations, integer}
+\item{y_na}{Copy of the input time series that is used to update the
+\code{sigma} parameter during model fitting. The copy is used to
+achieve update behavior specific to \code{sigma} when dealing
+with missing values and anomalies. At the moment, anomalies
+are not cleaned in \code{y_na}, such that \code{sigma} will eventually
+adjust towards them. This behavior might change in the future.}
+\item{param_grid}{Set of smoothing parameters of fitted model}
+\item{sigma}{Fitted scale parameter of likelihood function}
+\item{l}{Fitted level state component}
+\item{b}{Fitted trend state component}
+\item{s}{Fitted seasonality state component}
+\item{l_init}{Initial level state component}
+\item{b_init}{Initial trend state component}
+\item{s_init}{Initial seasonality state component}
+\item{log_joint}{Value of the (log) joint distribution at the chosen
+parameter values}
+\item{family}{The distribution family of the fitted model}
+\item{m}{The suspected seasonality period length}
+\item{method}{Either \code{additive} or \code{multiplicative} seasonal component}
+\item{priors}{The list of priors used during the model estimation. This
+can deviate from the user-provided \code{priors} argument
+when the user did not provide a prior for all parameters.
+The returned list lists all priors that were effectively
+used.}
+\item{comment}{A character string; missing value in the normal case, else
+describing a predefined exception, e.g. in the case of a
+very short input series}
+\item{full}{List containing all fitted models for the full parameter grid}
 }
 }
 \description{
-Fit a robust exponential smoothing model via grid search
+Given a univariate time series \code{y}, \code{tulip} fits an exponential smoothing
+model using maximum-a-posteriori (MAP) estimation. Prior distributions for
+the smoothing parameters, the error component, and the probability of
+anomalies can be provided via \code{priors}. The set of available parameter
+combinations is defined by \code{param_grid} over which the optimization of the
+MAP procedure takes place. The error and trend component are additive (if
+used), whereas the seasonal component can be additive or multiplicative.
 }
 \examples{
-set.seed(4278)
-y <- rt(100, df = 10) * 10 + 1:100
 
-ls_fit <- tulip(y = y, m = 12, family = "norm")
+fitted_model <- tulip(y = tulip::flowers$flowers, m = 12)
 
-print(ls_fit$family)
-print(ls_fit$param_grid)
+print(fitted_model$family)
+print(fitted_model$param_grid)
 
-plot(y, type = "l", col = "grey", xlab = NA)
-points(y, pch = 21, bg = "black", col = "white")
+plot(tulip::flowers$flowers, type = "l", col = "grey", xlab = NA)
+points(tulip::flowers$flowers, pch = 21, bg = "black", col = "white")
 
 # add fitted values
-lines(ls_fit$y_hat, col = "blue")
+lines(fitted_model$y_hat, col = "blue")
 
-# add actuals with interpolated anomalies
-points(ls_fit$x_cleaned * ls_fit$y_mad + ls_fit$y_median,
-       col = "orange", pch = 21)
+# indicate observations identified as anomalies and consequently interpolated
+idx_anomalies <- which(fitted_model$y_cleaned != tulip::flowers$flowers)
+points(
+  x = idx_anomalies,
+  y = fitted_model$y_cleaned[idx_anomalies],
+  col = "darkorange", pch = 19
+)
+points(
+  x = idx_anomalies,
+  y = fitted_model$y_cleaned[idx_anomalies],
+  col = "white", pch = 21
+)
 
 }
 \seealso{
-\code{\link[=draw_paths]{draw_paths()}}, \code{\link[=initialize_states]{initialize_states()}}, \code{\link[=initialize_param_grid]{initialize_param_grid()}},
+\code{\link[=predict.tulip]{predict.tulip()}}, \code{\link[=initialize_states]{initialize_states()}}, \code{\link[=initialize_params_grid]{initialize_params_grid()}},
 \code{\link[=add_prior_level]{add_prior_level()}}, \code{\link[=add_prior_trend]{add_prior_trend()}}, \code{\link[=add_prior_seasonality]{add_prior_seasonality()}},
 \code{\link[=add_prior_error]{add_prior_error()}}, \code{\link[=add_prior_anomaly]{add_prior_anomaly()}}
 }

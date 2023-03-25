@@ -4,16 +4,16 @@
 \alias{add_prior_anomaly}
 \title{Add a prior on the probability of an anomaly}
 \usage{
-add_prior_anomaly(prob, priors = NULL)
+add_prior_anomaly(priors, prob)
 }
 \arguments{
+\item{priors}{A list containing other, already defined, priors. If NULL, a
+list will be started with \code{anomaly} as entry. Else, the provided list will
+be extended with \code{anomaly}.}
+
 \item{prob}{The \code{prob} parameter for a Binomial distribution, as in
 \code{dbinom()}. The corresponding \code{size} parameter of \code{dbinom} will be the
 length of the time series.}
-
-\item{priors}{A list containing other, already defined, priors. If not
-provided, a list will be started with \code{anomaly} as entry. Else, the
-provided list will be extended with \code{anomaly}.}
 }
 \value{
 A list that includes a list named \code{anomaly}, which is a list with a
@@ -23,16 +23,15 @@ A list that includes a list named \code{anomaly}, which is a list with a
 Add a prior on the probability of an anomaly
 }
 \examples{
-ps <- list()
-ps <- add_prior_anomaly(prob = 0.01)
+ps <- add_prior_anomaly(priors = list(), prob = 0.01)
 print(ps)
 
 # overwrites the existing entry
-ps <- add_prior_anomaly(prob = 0.05)
+ps <- add_prior_anomaly(priors = ps, prob = 0.05)
 print(ps)
 
 }
 \seealso{
-\code{add_prior_trend()}, \code{add_prior_level()}, \code{add_prior_error()},
-\code{add_prior_seasonality()}
+\code{\link[=add_prior_trend]{add_prior_trend()}}, \code{\link[=add_prior_level]{add_prior_level()}}, \code{\link[=add_prior_error]{add_prior_error()}},
+\code{\link[=add_prior_seasonality]{add_prior_seasonality()}}
 }

@@ -1,5 +1,6 @@
 test_that("add_prior_level returns a list with required objects", {
   priors <- add_prior_level(
+    priors = NULL,
     guess = 0.25,
     n = 4,
     verbose = FALSE,
@@ -20,6 +21,7 @@ test_that("add_prior_level returns a list with required objects", {
 test_that("add_prior_level returns explainer when verbose is TRUE", {
   expect_message(
     add_prior_level(
+      priors = NULL,
       guess = 0.33,
       n = 3,
       verbose = TRUE,
@@ -59,6 +61,7 @@ test_that("add_prior_level adds 'level' list to existing list", {
 test_that("add_prior_level fails when input is wrong", {
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = 0,
       n = 2,
       verbose = FALSE,
@@ -69,6 +72,7 @@ test_that("add_prior_level fails when input is wrong", {
 
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = 1,
       n = 0,
       verbose = FALSE,
@@ -79,6 +83,7 @@ test_that("add_prior_level fails when input is wrong", {
 
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = c(1, 2),
       n = 2,
       verbose = FALSE,
@@ -89,6 +94,7 @@ test_that("add_prior_level fails when input is wrong", {
 
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = 1,
       n = c(1, 2),
       verbose = FALSE,
@@ -99,6 +105,7 @@ test_that("add_prior_level fails when input is wrong", {
 
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = -1,
       n = 2,
       verbose = FALSE,
@@ -109,6 +116,7 @@ test_that("add_prior_level fails when input is wrong", {
 
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = 1,
       n = -2,
       verbose = FALSE,
@@ -119,6 +127,7 @@ test_that("add_prior_level fails when input is wrong", {
 
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = NA,
       n = 2,
       verbose = FALSE,
@@ -129,6 +138,7 @@ test_that("add_prior_level fails when input is wrong", {
 
   expect_error(
     add_prior_level(
+      priors = NULL,
       guess = 1,
       n = NA,
       verbose = FALSE,

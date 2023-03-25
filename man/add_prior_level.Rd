@@ -4,18 +4,18 @@
 \alias{add_prior_level}
 \title{Add a prior on the level component}
 \usage{
-add_prior_level(guess, n, priors = NULL, verbose = FALSE, plot = FALSE)
+add_prior_level(priors = NULL, guess, n, verbose = FALSE, plot = FALSE)
 }
 \arguments{
+\item{priors}{A list containing other, already defined, priors. If NULL, a
+list will be started with \code{level} as entry. Else, the provided list
+will be extended with \code{level}.}
+
 \item{guess}{Which \eqn{\alpha} parameter do you expect?}
 
 \item{n}{How much weight (n terms of observations) do you want to give your
 prior assumption? The larger this value, the more data observations it will
 take to wash out your prior distribution in case it is misspecified.}
-
-\item{priors}{A list containing other, already defined, priors. If not
-provided, a list will be started with \code{level} as entry. Else, the
-provided list will be extended with \code{level}.}
 
 \item{verbose}{Should summarizing information be printed using \code{message()}?}
 
@@ -38,20 +38,20 @@ Note: In contrast to the trend and seasonal components, we don't specify an
 is always used.
 
 The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
-If \code{alpha} is smaller or equal than 1, than the density will be highest at 0.
+If \code{alpha} is smaller or equal than 1, then the density will be highest at 0.
 
 Values of \code{alpha} closer to 0 imply a non-fluctating i.i.d. level component,
 while values of \code{alpha} closer to 1 imply a more random-walk-like behavior.
 }
 \examples{
 ps <- add_prior_level(
-  alpha = 1, beta = 7, verbose = TRUE, plot = TRUE
+  priors = list(), guess = 1/7, n = 6, verbose = TRUE, plot = TRUE
 )
 
 print(ps)
 
 }
 \seealso{
-\code{add_prior_seasonality()}, \code{add_prior_trend()}, \code{add_prior_error()},
-\code{add_prior_anomaly()}
+\code{\link[=add_prior_seasonality]{add_prior_seasonality()}}, \code{\link[=add_prior_trend]{add_prior_trend()}}, \code{\link[=add_prior_error]{add_prior_error()}},
+\code{\link[=add_prior_anomaly]{add_prior_anomaly()}}
 }

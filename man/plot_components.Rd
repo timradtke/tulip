@@ -2,7 +2,7 @@
 % Please edit documentation in R/autoplot.R
 \name{plot_components}
 \alias{plot_components}
-\title{Plot scaled components of an \code{tulip} model}
+\title{Plot state components of an \code{tulip} model}
 \usage{
 plot_components(object, date = NULL, scales = c("free", "fixed")[1])
 }
@@ -16,15 +16,16 @@ to \code{YYYY-MM-DD} with same length as \code{object$y}, used to create x-axis}
 \code{\link[ggplot2:facet_grid]{ggplot2::facet_grid()}}}
 }
 \description{
-This function requires the \link[ggplot2:ggplot2-package]{ggplot2}. Whether its namespace
-is available will be checked when the function is run. \code{ggplot2} is only
-suggested, not a default import.
+This function requires the \link[ggplot2:ggplot2-package]{ggplot2}. Whether its
+namespace is available will be checked when the function is run. \code{ggplot2} is
+only suggested, not a default import.
 }
 \examples{
 set.seed(4278)
 y <- rt(100, df = 10) * 10 + 1:100
 
 fitted <- tulip(y = y, m = 12, family = "norm")
-plot_components(object = fitted)
+tulip:::plot_components(object = fitted)
 
 }
+\keyword{internal}

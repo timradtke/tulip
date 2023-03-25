@@ -1,17 +1,61 @@
 #' Forecast by drawing sample paths from a fitted object
 #'
-#' Instead of generating a point forecast and marginal forecast intervals based
-#' on a Normal assumption and closed-from equations, we draw observations from
-#' the observation equation. The uncertainty is then represented via samples
-#' from the forecast distribution. This allows us to represent the distribution
-#' over multiple horizons instead of only the marginal distribution at
-#' individual horizons.
+#' Generate a forecast in the form of `n` sample paths for the forecast horizon
+#' `h` based on the fitted model `object`.
+#'
+#' The forecasts of a `tulip` model are natively represented by sample paths.
+#' Instead of providing a single point forecast, or marginal quantiles, possible
+#' future outcomes are summarized through samples from the joint distribution
+#' across future horizons. These samples can be summarized down to marginal
+#' quantiles, but they also contain the dependency between future horizons
+#' that is commonly lost by forecast frameworks that solely store marginal
+#' quantile forecasts.
+#'
+#' Depending on the chosen `family`, the samples are either based on a
+#' distribution that is fitted against the model's residuals during the fitting
+#' procedure; or they can be based directly on bootstrapped residuals if
+#' the `family` of the `tulip` object is overwritten to be `bootstrap`. In the
+#' latter case, the forecast distribution can represent asymmetries that were
+#' observed in the input data. You might *not* want to use `bootstrap` when the
+#' input time series is very short. In such cases, a parametric assumption can
+#' help with more reasonable behavior of the error component.
+#'
+#' As for all exponential smoothing models, the one-step-ahead sample is fed
+#' back into the model to update the state components, before the two-step-ahead
+#' forecast sample is drawn given the updated state components. Through this
+#' mechanism, the temporal dependencies between samples of the same sample path
+#' are maintained. For example, if the initial sample is higher than average,
+#' the level and trend components of the model might update to be larger, thus
+#' consequently increasing chances that the next sample is again high (compared
+#' to the most recently observed training observation and level).
+#'
+#' If the model is able to represent the input data well, then sample paths look
+#' like reasonable future continuations of the input series. Averaging across
+#' sample paths one can derive quantiles of the forecast distribution.
+#'
+#' Importantly, because the sample paths maintain the temporal dependencies,
+#' one can also aggregate the forecasts *across forecast horizons* which is not
+#' possible when only quantiles are returned by a model. The ability to
+#' summarize arbitrary aggregates can be helpful for optimization problems that
+#' use the forecast as input.
 #'
 #' The returned value is a matrix of dimensions `h` times `n`. Each of the `n`
 #' columns represents one sample path and is a random draw from the
 #' `h`-dimensional forecast distribution. See also examples below.
 #'
-#' @param object The fitted model object returned by [tulip()] of class
+#' Use the `postprocess_sample` argument to hook into the sampling process of
+#' the `predict()` method. Provide a function that is applied on the current
+#' j-step-ahead vector of samples *before* it is fed back into the model, before
+#' the states are updated given those samples. This allows you to adjust the
+#' data generating process--for example, to enforce non-negative count samples--
+#' while doing so before the state components (level, trend, seasonality) of the
+#' model are updated given the most recent sample. This can prevent the model's
+#' level from drifting to zero, for example, because samples never became
+#' less than zero, thus affecting subsequent samples to drift even further below
+#' zero, and so on. Generated samples stay similar to the input data, allowing
+#' the forecast to stay similar to the input data.
+#'
+#' @param object The fitted model object returned by [tulip::tulip()] of class
 #'     `tulip`.
 #' @param h The forecast horizon as integer number of periods.
 #' @param n The integer number of sample paths to draw from the forecast
@@ -21,22 +65,51 @@
 #'     interpolated during fitting of the smoothing parameters, then the
 #'     forecast distribution can automatically switch to a Cauchy distribution
 #'     from which sample paths are drawn instead. Default is `FALSE`.
+#' @param postprocess_sample A function that is applied on a numeric vector of
+#'     drawn samples for a single step-ahead before the samples are used to
+#'     update the state of the model, and before outliers are removed
+#'     (if applicable). By default equal to `identity()`, but could also
+#'     be something like `function(x) pmax(x, 0)` to enforce a lower bound of 0,
+#'     or any other transformation of interest. This works best with
+#'     `family = "bootstrap"` when the applied transformation represents a
+#'     feature of the data generating process that is non-Gaussian.
+#'     Note that this can cause arbitrary errors caused by the author of the
+#'     function provided to `postprocess_sample`.
 #' @param ... arguments passed to or from other methods.
 #'
-#' @seealso [tulip()], [stats::predict()]
+#' @return An object of class `tulip_paths` that is a list of:
+#' \describe{
+#'   \item{paths}{A matrix of dimensions (`h`, `n`), in which each of the `n`
+#'                columns represents one sample path over the `h`-steps-ahead}
+#'   \item{model}{The provided model `object`}
+#' }
+#'
+#' @seealso [tulip::tulip()], [autoplot.tulip_paths()], [stats::predict()]
+#'
+#' @references
+#' \describe{
+#'   \item{Chapter 4.2 of: Syama Sundar Rangapuram, Matthias W. Seeger, Jan Gasthaus, Lorenzo Stella, Yuyang Wang, Tim Januschowski (2018). *Deep State Space Models for Time Series Forecasting*.}{\url{https://papers.nips.cc/paper/2018/hash/5cf68969fb67aa6082363a6d4e6468e2-Abstract.html}}
+#'   \item{Chapter 6.1, for example, of: Rob J. Hyndman, Anne B. Koehler, Ralph D. Snyder, and Simone Grose (2002). *A State Space Framework for Automatic Forecasting using Exponential Smoothing Methods*.}{\url{https://doi.org/10.1016/S0169-2070(01)00110-8}}
+#'   \item{Matthias Seeger, Syama Rangapuram, Yuyang Wang, David Salinas, Jan Gasthaus, Tim Januschowski, Valentin Flunkert (2017). *Approximate Bayesian Inference in Linear State Space Models for Intermittent Demand Forecasting at Scale*.}{\url{https://arxiv.org/abs/1709.07638}}
+#'   \item{Matthias Seeger, David Salinas, Valentin Flunkert (2016). *Bayesian Intermittent Demand Forecasting for Large Inventories*.}{\url{https://proceedings.neurips.cc/paper/2016/file/03255088ed63354a54e0e5ed957e9008-Paper.pdf}}
+#'   \item{Alexander Alexandrov, Konstantinos Benidis, Michael Bohlke-Schneider, Valentin Flunkert, Jan Gasthaus, Tim Januschowski, Danielle C. Maddix, Syama Rangapuram, David Salinas, Jasper Schulz, Lorenzo Stella, Ali Caner Türkmen, Yuyang Wang (2019). *GluonTS: Probabilistic Time Series Models in Python*.}{\url{https://arxiv.org/abs/1906.05264}}
+#' }
 #'
 #' @export
-#'
 #' @examples
-#' set.seed(4278)
+#' fitted_model <- tulip(y = tulip::flowers$flowers, m = 12)
+#' forecast <- predict(object = fitted_model, h = 12, n = 10000)
 #'
-#' y <- rt(100, df = 10) * 10 + 1:100
-#' # plot(y, type = "l", col = "grey", xlab = NA)
-#' # points(y, pch = 21, bg = "black", col = "white")
+#' # library(ggplot2)
 #'
-#' ls_fit <- tulip(y = y, m = 12, family = "norm")
+#' # visualize the marginal quantile forecast
+#' # autoplot(forecast)
 #'
-#' m_fc <- predict(object = ls_fit, h = 12, n = 10000)
+#' # visualize a handful of sample paths directly
+#' # autoplot(forecast, method = "paths")
+#'
+#' # let's take a closer look at the sample paths themselves
+#' m_fc <- forecast$paths
 #'
 #' # summarize over draws (columns) to get point forecasts
 #' rowMeans(m_fc)
@@ -63,10 +136,33 @@
 #' cor(m_fc[4, ], m_fc[6, ])
 #' cor(m_fc_shuffled[1, ], m_fc_shuffled[3, ])
 #'
+#' # -------------------
+#'
+#' # An example of how the `postprocess_sample` argument can be used to
+#' # enforce non-negative forecasts
+#'
+#' set.seed(7759)
+#'
+#' y <- rpois(n = 60, lambda = 1)
+#'
+#' ls_fit <- tulip(y = y, m = 12, family = "norm", method = "additive")
+#' ls_fit$family <- "bootstrap"
+#'
+#' m_fc <- predict(
+#'   object = ls_fit,
+#'   h = 12,
+#'   n = 10000,
+#'   postprocess_sample = function(x) pmax(0, x)
+#' )
+#'
+#' # library(ggplot2)
+#' # autoplot(m_fc)
+#'
 predict.tulip <- function(object,
                           h = 12,
                           n = 10000,
                           switch_to_cauchy_if_outliers = FALSE,
+                          postprocess_sample = identity,
                           ...) {
 
   checkmate::assert_class(x = object, classes = "tulip", null.ok = FALSE)
@@ -74,8 +170,8 @@ predict.tulip <- function(object,
   checkmate::assert_names(
     x = names(object),
     must.include = c("l", "b", "s", "l_init", "b_init", "s_init",
-                     "param_grid", "sigma", "y", "y_hat", "x", "x_hat",
-                     "x_na", "family", "m", "y_median", "y_mad", "comment")
+                     "param_grid", "sigma", "y", "y_hat",
+                     "y_na", "family", "m", "comment")
   )
   checkmate::assert_integerish(
     x = h, any.missing = FALSE, null.ok = FALSE, len = 1
@@ -83,6 +179,7 @@ predict.tulip <- function(object,
   checkmate::assert_integerish(
     x = n, any.missing = FALSE, null.ok = FALSE, len = 1
   )
+  checkmate::assert_function(x = postprocess_sample)
 
   if (isTRUE(object$comment == "all_NA")) {
     return(
@@ -132,32 +229,37 @@ predict.tulip <- function(object,
   }
 
   family <- object$family
+  method <- object$method
+
+  checkmate::assert_choice(
+    x = method, choices = c("additive", "multiplicative"), null.ok = FALSE
+  )
 
   if (family == "norm" &&
       switch_to_cauchy_if_outliers &&
       object$n_cleaned > 1 + ceiling(0.01 * length(object$x))) {
     family <- "cauchy"
-    object$sigma <- IQR(x = object$x_hat - object$x, na.rm = TRUE) / 2
+    object$sigma <- stats::IQR(x = object$y_hat - object$y, na.rm = TRUE) / 2
   }
 
   # draw IID errors to be used when creating sample paths
   if (family == "cauchy") {
     m_e <- matrix(
-      rcauchy(n = h * n, location = 0, scale = object$sigma),
+      stats::rcauchy(n = h * n, location = 0, scale = object$sigma),
       ncol = n
     )
   } else if (family == "norm") {
     m_e <- matrix(
-      rnorm(n = h * n, mean = 0, sd = object$sigma),
+      stats::rnorm(n = h * n, mean = 0, sd = object$sigma),
       ncol = n
     )
   } else if (family == "student") {
     m_e <- matrix(
-      rt(n = h * n, df = 5) * object$sigma,
+      stats::rt(n = h * n, df = 5) * object$sigma,
       ncol = n
     )
   } else if (family == "bootstrap") {
-    residuals <- na.omit(object$x - object$x_hat)
+    residuals <- stats::na.omit(object$y - object$y_hat)
     m_e <- matrix(
       sample(x = residuals, size = h * n, replace = TRUE),
       ncol = n
@@ -209,50 +311,70 @@ predict.tulip <- function(object,
   y <- matrix(rep(NA, (m + h) * n), ncol = n)
   y_orig <- matrix(rep(NA, (m + h) * n), ncol = n)
   m_e_orig <- m_e
-  fit_clean_sigma <- sd(object$x_na, na.rm = TRUE)
+  fit_clean_sigma <- stats::sd(object$y_na, na.rm = TRUE)
 
   for (i in (m+1):(m+h)) {
-    if (family == "nbinom") {
-      tmp_y <- rnbinom(
-        n = n,
-        size = object$sigma,
-        mu = expm1(l[i-1, ] + b[i-1, ] + s[i-m, ])
-      )
-      y[i, ] <- log1p(tmp_y)
-    } else {
 
-      y_orig[i, ] <- l[i-1, ] + b[i-1, ] + s[i-m, ] + m_e[i-m, ]
+    y_orig[i, ] <- m_e[i-m, ] + update_prediction(
+      level_previous = l[i-1, ],
+      trend_previous = b[i-1, ],
+      season_previous = s[i-m, ],
+      method = method
+    )
 
-      if (!is.na(fit_clean_sigma) && family == "cauchy") {
-        is_outlier <- pnorm(
-          q = abs(m_e[i-m, ]),
-          mean = 0,
-          sd = fit_clean_sigma
-        ) > 0.99
+    y_orig[i, ] <- postprocess_sample(y_orig[i, ])
 
-        # use `y_hat` instead of `y` to continue update of parameters
-        m_e[i-m, ] <- ifelse(is_outlier, 0, m_e[i-m, ])
-      }
+    if (!is.na(fit_clean_sigma) && family == "cauchy") {
+      is_outlier <- stats::pnorm(
+        q = abs(m_e[i-m, ]),
+        mean = 0,
+        sd = fit_clean_sigma
+      ) > 0.99
 
-      y[i, ] <- l[i-1, ] + b[i-1, ] + s[i-m, ] + m_e[i-m, ]
+      # use `y_hat` instead of `y` to continue update of parameters
+      m_e[i-m, ] <- ifelse(is_outlier, 0, m_e[i-m, ])
     }
 
-    l[i, ] <- alpha * (y[i, ] - s[i-m, ]) +
-      one_minus_alpha * (l[i-1, ] + b[i-1, ])
-    b[i, ] <- beta * (l[i, ] - l[i-1, ]) +
-      one_minus_beta * b[i-1, ]
-    s[i, ] <- gamma * (y[i, ] - l[i-1, ] - b[i-1, ]) +
-      one_minus_gamma * s[i-m, ]
+    y[i, ] <- m_e[i-m, ] + update_prediction(
+      level_previous = l[i-1, ],
+      trend_previous = b[i-1, ],
+      season_previous = s[i-m, ],
+      method = method
+    )
+
+    y[i, ] <- postprocess_sample(y[i, ])
+
+    l[i, ] <- update_level(
+      alpha = alpha,
+      one_minus_alpha = one_minus_alpha,
+      y = y[i, ],
+      level_previous = l[i-1, ],
+      trend_previous = b[i-1, ],
+      season_previous = s[i-m, ],
+      method = method
+    )
+
+    b[i, ] <- update_trend(
+      beta = beta,
+      one_minus_beta = one_minus_beta,
+      level_current = l[i, ],
+      level_previous = l[i-1, ],
+      trend_previous = b[i-1, ]
+    )
+
+    s[i, ] <- update_season(
+      gamma = gamma,
+      one_minus_gamma = one_minus_gamma,
+      y = y[i, ],
+      level_previous = l[i-1, ],
+      trend_previous = b[i-1, ],
+      season_previous = s[i-m, ],
+      method = method
+    )
   }
 
   # drop the placeholders used for initial states
   y_orig <- y_orig[-(1:m), ]
-
-  if (family %in% c("norm", "cauchy", "student", "bootstrap")) {
-    y_orig <- y_orig * object$y_mad + object$y_median
-  } else if (family == "nbinom") {
-    y_orig <- expm1(y_orig)
-  }
 
   result <- structure(
     list(

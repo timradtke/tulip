@@ -64,18 +64,6 @@ test_that("tulip returns no_variance commment if y is constant", {
                    expected = tulip_object$y)
 })
 
-test_that("tulip returns mad_zero commment if y is mostly constant", {
-  expect_warning(
-    tulip_object <- tulip(y = c(100, 100, 100, rnorm(2)), m = 12),
-    regexp = "MAD"
-  )
-  expect_s3_class(object = tulip_object, class = "tulip")
-  expect_true(!is.null(tulip_object$comment))
-  expect_identical(object = tulip_object$comment, expected = "mad_zero")
-  expect_identical(object = tulip_object$y_hat,
-                   expected = rep(100, 5)) # median of the `y` input
-})
-
 test_that("tulip fails if y is not numeric", {
   y <- rnorm(n = 50, mean = 50)
   expect_error(tulip(y = data.frame(y = y), m = NA),
@@ -121,7 +109,14 @@ test_that("tulip works for m equal to 1", {
 test_that("each family option works on simple example", {
   y <- rnorm(n = 50, mean = 50)
 
-  tulip_object <- tulip(y = y, m = 12, family = "auto")
+  tulip_object <- tulip(y = y, m = 12,
+                        family = c("norm", "cauchy", "student"))
+  expect_s3_class(object = tulip_object, class = "tulip")
+  expect_true(is.list(tulip_object))
+  expect_false(anyNA(tulip_object$param_grid))
+
+  tulip_object <- tulip(y = y, m = 12,
+                        family = c("norm", "student"))
   expect_s3_class(object = tulip_object, class = "tulip")
   expect_true(is.list(tulip_object))
   expect_false(anyNA(tulip_object$param_grid))
@@ -224,11 +219,12 @@ test_that("tulip fails if a param_grid value is NA", {
 
 test_that("tulip's speed did not regress", {
   skip_on_cran()
+  skip_if_not_installed("microbenchmark")
   set.seed(4027)
   y <- rt(n = 50, df = 3)
 
   mb_timing <- microbenchmark::microbenchmark({
-    tulip(y = y, m = 12, family = "auto")
+    tulip(y = y, m = 12, family = c("norm", "student"))
   },
   times = 250L,
   unit = "seconds"

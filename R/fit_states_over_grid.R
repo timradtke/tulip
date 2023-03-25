@@ -1,7 +1,7 @@
 
-
 fit_states_over_grid <- function(y,
                                  m,
+                                 method,
                                  init_states,
                                  param_grid,
                                  remove_anomalies,
@@ -15,6 +15,7 @@ fit_states_over_grid <- function(y,
 
   # Initialize matrices that will be updated and store states ----
 
+  if (is.null(anomaly_candidates)) anomaly_candidates <- rep(FALSE, n)
   anomaly_budget <- rep(anomaly_budget, k)
 
   # pad y with NA start values, then expand by number of parameter options
@@ -42,7 +43,12 @@ fit_states_over_grid <- function(y,
 
   # drop states entirely if very small for some reason
   b[, param_grid[, "beta"] + param_grid[, "one_minus_beta"] < 0.00001] <- 0
-  s[, param_grid[, "gamma"] + param_grid[, "one_minus_gamma"] < 0.00001] <- 0
+  if (method == "additive") {
+    s[, param_grid[, "gamma"] + param_grid[, "one_minus_gamma"] < 0.00001] <- 0
+  } else if (method == "multiplicative") {
+    s[, param_grid[, "gamma"] + param_grid[, "one_minus_gamma"] < 0.00001] <- 1
+  }
+
 
   # Iterate over all observations to update states for each parameter combo ----
   # All computations are applied in vectorized form across all parameter combos
@@ -54,7 +60,8 @@ fit_states_over_grid <- function(y,
     y_hat[i, ] <- update_prediction(
       level_previous = l[i-1, ],
       trend_previous = b[i-1, ],
-      season_previous = s[i-m, ]
+      season_previous = s[i-m, ],
+      method = method
     )
 
     # Release final anomaly budget ----
@@ -112,7 +119,8 @@ fit_states_over_grid <- function(y,
       y = y[i, ],
       level_previous = l[i-1, ],
       trend_previous = b[i-1, ],
-      season_previous = s[i-m, ]
+      season_previous = s[i-m, ],
+      method = method
     )
 
     b[i, ] <- update_trend(
@@ -129,7 +137,8 @@ fit_states_over_grid <- function(y,
       y = y[i, ],
       level_previous = l[i-1, ],
       trend_previous = b[i-1, ],
-      season_previous = s[i-m, ]
+      season_previous = s[i-m, ],
+      method = method
     )
   }
 
@@ -154,7 +163,6 @@ fit_states_over_grid <- function(y,
   )
 }
 
-# provide
 classify_anomaly <- function(y, y_hat, threshold = 3) {
   n_obs <- nrow(y)
   if (n_obs != nrow(y_hat)) {
@@ -170,7 +178,7 @@ classify_anomaly <- function(y, y_hat, threshold = 3) {
   tmp_sigma <- apply(
     tmp_residuals,
     MARGIN = 2,
-    FUN = mad,
+    FUN = stats::mad,
     na.rm = TRUE
   )
 
@@ -219,9 +227,14 @@ overwrite_y_for_sigma_update <- function(y, y_na, is_anomaly, anomaly_budget) {
 
 update_prediction <- function(level_previous,
                               trend_previous,
-                              season_previous) {
+                              season_previous,
+                              method) {
 
-  prediction_next <- level_previous + trend_previous + season_previous
+  if (method == "additive") {
+    prediction_next <- (level_previous + trend_previous) + season_previous
+  } else if (method == "multiplicative") {
+    prediction_next <- (level_previous + trend_previous) * season_previous
+  }
 
   return(prediction_next)
 }
@@ -231,8 +244,16 @@ update_level <- function(alpha,
                          y,
                          level_previous,
                          trend_previous,
-                         season_previous) {
-  level_next <- alpha * (y - season_previous) +
+                         season_previous,
+                         method) {
+
+  if (method == "additive") {
+    y_update <- y - season_previous
+  } else if (method == "multiplicative") {
+    y_update <- y / season_previous
+  }
+
+  level_next <- alpha * y_update +
     one_minus_alpha * (level_previous + trend_previous)
 
   return(level_next)
@@ -254,10 +275,25 @@ update_season <- function(gamma,
                           y,
                           level_previous,
                           trend_previous,
-                          season_previous) {
+                          season_previous,
+                          method) {
 
-  season_next <- gamma * (y - level_previous - trend_previous) +
+  if (method == "additive") {
+    y_update <- y - (level_previous + trend_previous)
+  } else if (method == "multiplicative") {
+    y_update <- y / (level_previous + trend_previous)
+  }
+
+  season_next <- gamma * y_update +
     one_minus_gamma * season_previous
+
+  if (method == "multiplicative") {
+    season_next <- ifelse(
+      abs(gamma + one_minus_gamma) < 0.001,
+      1,
+      season_next
+    )
+  }
 
   return(season_next)
 }

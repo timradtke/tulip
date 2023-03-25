@@ -4,9 +4,13 @@
 \alias{add_prior_trend}
 \title{Add a prior on the local-linear trend component}
 \usage{
-add_prior_trend(prob, guess, n, priors = NULL, verbose = FALSE, plot = FALSE)
+add_prior_trend(priors = NULL, prob, guess, n, verbose = FALSE, plot = FALSE)
 }
 \arguments{
+\item{priors}{A list containing other, already defined, priors. If NULL, a
+list will be started with \code{trend} as entry. Else, the provided list
+will be extended with \code{trend}.}
+
 \item{prob}{Probability that the time series has a local-linear trend, and
 that therefore a trend component should be included in the model. This
 parameterizes a Bernoulli distribution and should thus be a value in (0,1).}
@@ -16,10 +20,6 @@ parameterizes a Bernoulli distribution and should thus be a value in (0,1).}
 \item{n}{How much weight (n terms of observations) do you want to give your
 prior assumption? The larger this value, the more data observations it will
 take to wash out your prior distribution in case it is misspecified.}
-
-\item{priors}{A list containing other, already defined, priors. If not
-provided, a list will be started with \code{trend} as entry. Else, the
-provided list will be extended with \code{trend}.}
 
 \item{verbose}{Should summarizing information be printed using \code{message()}?}
 
@@ -31,27 +31,37 @@ A list that includes a list named \code{trend}, which is a list with
 }
 \description{
 The Beta distribution defined via \code{alpha} and \code{beta} is the prior on the
-\eqn{\alpha} and \eqn{\beta} of the estimated model. For example, if we
-expect that the trend component should only update slowly over time and thus
-only use a small part of the error component, then a small \code{alpha} and larger
-\code{beta} make sense.
+product \eqn{\alpha \cdot \beta}, where \eqn{\alpha} and \eqn{\beta} are the
+smoothing parameters for the level and trend components of the model.
 }
 \details{
-Note: The trend component is updated via
-\eqn{\alpha \cdot \beta \cdot \epsilon_t}. The prior on \eqn{\beta} is
-implicitly defined via the \code{add_prior_level()} and \code{add_prior_trend()}.
+The trend component is updated via \eqn{\alpha \cdot \beta \cdot \epsilon_t}.
+When \eqn{\alpha=0}, then the trend component will not change over time
+because the level component does not adjust to recent observations of the
+time series. Every value of \eqn{\beta} then has the same effect.
+
+Specifying the prior directly on the interaction makes it easier to enforce
+an expected \emph{effective} behavior of the trend. Independent of the value of
+\eqn{\alpha} (except for \eqn{\alpha = 0}), a small value for
+\eqn{\alpha \cdot \beta} implies that the trend will adjust slowly to more
+recent observations.
 
 The mean of the Beta distribution is \eqn{\mu = \alpha / (\alpha + \beta)}.
-If \code{alpha} is smaller or equal than 1, than the density will be highest at 0.
+If \code{alpha} is smaller or equal than 1, then the density will be highest at 0.
 }
 \examples{
 ps <- add_prior_trend(
-  prob = 0.75, alpha = 1, beta = 14, verbose = TRUE, plot = TRUE
+  priors = NULL,
+  prob = 0.75,
+  guess = 1/15,
+  n = 15,
+  verbose = TRUE,
+  plot = TRUE
 )
 
 print(ps)
 }
 \seealso{
-\code{add_prior_seasonality()}, \code{add_prior_level()}, \code{add_prior_error()},
-\code{add_prior_anomaly()}
+\code{\link[=add_prior_seasonality]{add_prior_seasonality()}}, \code{\link[=add_prior_level]{add_prior_level()}}, \code{\link[=add_prior_error]{add_prior_error()}},
+\code{\link[=add_prior_anomaly]{add_prior_anomaly()}}
 }

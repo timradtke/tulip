@@ -1,6 +1,7 @@
 test_that("add_prior_anomaly returns a list with required objects", {
   priors <- add_prior_anomaly(
-    prob = 0.01,
+    priors = NULL,
+    prob = 0.01
   )
 
   expect_identical(
@@ -39,6 +40,7 @@ test_that("add_prior_anomaly adds 'anomaly' list to existing list", {
 test_that("add_prior_anomaly fails when input is wrong", {
   expect_error(
     add_prior_anomaly(
+      priors = NULL,
       prob = -1
     ),
     regexp = "prob"
@@ -46,6 +48,7 @@ test_that("add_prior_anomaly fails when input is wrong", {
 
   expect_error(
     add_prior_anomaly(
+      priors = NULL,
       prob = 2.5
     ),
     regexp = "prob"
@@ -53,6 +56,7 @@ test_that("add_prior_anomaly fails when input is wrong", {
 
   expect_error(
     add_prior_anomaly(
+      priors = NULL,
       prob = c(0.5, 0.5)
     ),
     regexp = "prob"
