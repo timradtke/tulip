@@ -8,7 +8,7 @@
   object,
   h = 12,
   n = 10000,
-  switch_to_cauchy_if_outliers = FALSE,
+  remove_anomalies = TRUE,
   postprocess_sample = identity,
   ...
 )
@@ -22,11 +22,14 @@
 \item{n}{The integer number of sample paths to draw from the forecast
 distribution.}
 
-\item{switch_to_cauchy_if_outliers}{If \code{TRUE}, then if the fitted model uses
-a Normal distribution as likelihood but outliers were detected and
-interpolated during fitting of the smoothing parameters, then the
-forecast distribution can automatically switch to a Cauchy distribution
-from which sample paths are drawn instead. Default is \code{FALSE}.}
+\item{remove_anomalies}{Logical (default \code{TRUE}); during prediction, some
+generated samples can have the characteristics of anomalies; as such, they
+can be identified and interpolated to not adversely affect the state
+updates when predicting multiple horizos, similar to \code{remove_anomalies} in
+\code{\link[=tulip]{tulip()}}. The interpolated values are only used to fit the states.
+The returned sample paths will still contain the anomalous samples.
+Which samples are anomalous is determined based on the residuals from the
+original model fit.}
 
 \item{postprocess_sample}{A function that is applied on a numeric vector of
 drawn samples for a single step-ahead before the samples are used to

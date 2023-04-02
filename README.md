@@ -57,7 +57,7 @@ devtools::install_github("timradtke/tulip")
 Written in pure R, and with the `checkmate` package as the only direct
 dependency, installing `tulip` is a breeze.
 
-## Getting Started
+## Get Started
 
 For starters, let’s use a data set available in base R: `AirPassengers`.
 It’s not exactly something where `tulip` has any particular advantage,
@@ -167,11 +167,11 @@ round(forecast$paths[, 1:5])
 #>  [5,]  492  510  487  472  483
 #>  [6,]  556  588  554  547  545
 #>  [7,]  614  655  630  624  661
-#>  [8,]  581  620  577  581  583
-#>  [9,]  525  561  514  531  526
-#> [10,]  458  482  432  465  450
-#> [11,]  407  399  390  415  388
-#> [12,]  449  472  435  452  451
+#>  [8,]  581  620  577  581  569
+#>  [9,]  525  561  514  531  513
+#> [10,]  458  482  432  465  438
+#> [11,]  407  399  390  415  377
+#> [12,]  449  472  435  452  438
 ```
 
 A random sample of five forecast paths can be plotted by choosing the
@@ -328,7 +328,6 @@ y <- rpois(n = 28, lambda = 2)
 
 ``` r
 fitted_model <- tulip::tulip(y = y, m = 12)
-fitted_model$family <- "bootstrap"
 ```
 
 ``` r
@@ -383,7 +382,7 @@ Roland Fried (2004). *Robust Filtering of Time Series with Trends*.
 
 Sarah Gelper, Roland Fried, Cristophe Croux (2007). *Robust Forecasting
 with Exponential and Holt-Winters Smoothing*.
-<https://ssrn.com/abstract=1089493>
+<http://dx.doi.org/10.2139/ssrn.1089403>
 
 Andrew C. Harvey (1990). *Forecasting, Structural Time Series Models and
 the Kalman Filter*. <https://doi.org/10.1017/CBO9781107049994>

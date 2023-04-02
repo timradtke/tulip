@@ -591,8 +591,11 @@ initialize_params_random <- function(n_damped = 1000,
   }
 
   if (!is.null(seed)) {
-    random_seed_current <- .Random.seed
-    on.exit({.Random.seed <<- random_seed_current})
+    # checking for existence to avoid issues when building vignettes
+    if (exists(".Random.seed")) {
+      random_seed_current <- .Random.seed
+      on.exit({.Random.seed <<- random_seed_current})
+    }
     set.seed(seed = seed)
   }
 

@@ -182,14 +182,27 @@ classify_anomaly <- function(y, y_hat, threshold = 3) {
     na.rm = TRUE
   )
 
-  current_error <- abs(as.numeric(y_hat[n_obs, ] - y[n_obs, ]))
+  latest_residuals <- abs(as.numeric(y_hat[n_obs, ] - y[n_obs, ]))
 
-  is_anomaly <- current_error > threshold * tmp_sigma
-  is_anomaly <- ifelse(is.na(is_anomaly), FALSE, is_anomaly)
+  is_anomaly <- classify_anomaly_from_sigma(
+    residuals = latest_residuals,
+    sigma = tmp_sigma,
+    threshold = threshold
+  )
 
   if (length(is_anomaly) != ncol(y)) {
     stop("Length of `is_anomaly` would not be equal to number of columns of `y`.")
   }
+
+  return(is_anomaly)
+}
+
+classify_anomaly_from_sigma <- function(residuals,
+                                        sigma,
+                                        threshold) {
+
+  is_anomaly <- residuals > threshold * sigma
+  is_anomaly <- ifelse(is.na(is_anomaly), FALSE, is_anomaly)
 
   return(is_anomaly)
 }

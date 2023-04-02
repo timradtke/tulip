@@ -60,11 +60,14 @@
 #' @param h The forecast horizon as integer number of periods.
 #' @param n The integer number of sample paths to draw from the forecast
 #'     distribution.
-#' @param switch_to_cauchy_if_outliers If `TRUE`, then if the fitted model uses
-#'     a Normal distribution as likelihood but outliers were detected and
-#'     interpolated during fitting of the smoothing parameters, then the
-#'     forecast distribution can automatically switch to a Cauchy distribution
-#'     from which sample paths are drawn instead. Default is `FALSE`.
+#' @param remove_anomalies Logical (default `TRUE`); during prediction, some
+#'   generated samples can have the characteristics of anomalies; as such, they
+#'   can be identified and interpolated to not adversely affect the state
+#'   updates when predicting multiple horizos, similar to `remove_anomalies` in
+#'   [tulip::tulip()]. The interpolated values are only used to fit the states.
+#'   The returned sample paths will still contain the anomalous samples.
+#'   Which samples are anomalous is determined based on the residuals from the
+#'   original model fit.
 #' @param postprocess_sample A function that is applied on a numeric vector of
 #'     drawn samples for a single step-ahead before the samples are used to
 #'     update the state of the model, and before outliers are removed
@@ -161,7 +164,7 @@
 predict.tulip <- function(object,
                           h = 12,
                           n = 10000,
-                          switch_to_cauchy_if_outliers = FALSE,
+                          remove_anomalies = TRUE,
                           postprocess_sample = identity,
                           ...) {
 
@@ -179,6 +182,7 @@ predict.tulip <- function(object,
   checkmate::assert_integerish(
     x = n, any.missing = FALSE, null.ok = FALSE, len = 1
   )
+  checkmate::assert_logical(x = remove_anomalies, len = 1, any.missing = FALSE)
   checkmate::assert_function(x = postprocess_sample)
 
   if (isTRUE(object$comment == "all_NA")) {
@@ -230,17 +234,11 @@ predict.tulip <- function(object,
 
   family <- object$family
   method <- object$method
+  residuals <- stats::na.omit(object$y - object$y_hat)
 
   checkmate::assert_choice(
     x = method, choices = c("additive", "multiplicative"), null.ok = FALSE
   )
-
-  if (family == "norm" &&
-      switch_to_cauchy_if_outliers &&
-      object$n_cleaned > 1 + ceiling(0.01 * length(object$x))) {
-    family <- "cauchy"
-    object$sigma <- stats::IQR(x = object$y_hat - object$y, na.rm = TRUE) / 2
-  }
 
   # draw IID errors to be used when creating sample paths
   if (family == "cauchy") {
@@ -259,7 +257,6 @@ predict.tulip <- function(object,
       ncol = n
     )
   } else if (family == "bootstrap") {
-    residuals <- stats::na.omit(object$y - object$y_hat)
     m_e <- matrix(
       sample(x = residuals, size = h * n, replace = TRUE),
       ncol = n
@@ -311,7 +308,10 @@ predict.tulip <- function(object,
   y <- matrix(rep(NA, (m + h) * n), ncol = n)
   y_orig <- matrix(rep(NA, (m + h) * n), ncol = n)
   m_e_orig <- m_e
-  fit_clean_sigma <- stats::sd(object$y_na, na.rm = TRUE)
+
+  if (remove_anomalies) {
+    residuals_mad <- stats::mad(residuals, na.rm = TRUE)
+  }
 
   for (i in (m+1):(m+h)) {
 
@@ -324,15 +324,15 @@ predict.tulip <- function(object,
 
     y_orig[i, ] <- postprocess_sample(y_orig[i, ])
 
-    if (!is.na(fit_clean_sigma) && family == "cauchy") {
-      is_outlier <- stats::pnorm(
-        q = abs(m_e[i-m, ]),
-        mean = 0,
-        sd = fit_clean_sigma
-      ) > 0.99
+    if (remove_anomalies) {
+      is_anomaly <- classify_anomaly_from_sigma(
+        residuals = m_e[i-m, ],
+        sigma = residuals_mad,
+        threshold = 3
+      )
 
       # use `y_hat` instead of `y` to continue update of parameters
-      m_e[i-m, ] <- ifelse(is_outlier, 0, m_e[i-m, ])
+      m_e[i-m, ] <- ifelse(is_anomaly, 0, m_e[i-m, ])
     }
 
     y[i, ] <- m_e[i-m, ] + update_prediction(

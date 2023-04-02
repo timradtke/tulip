@@ -62,7 +62,7 @@ devtools::install_github("timradtke/tulip")
 
 Written in pure R, and with the `checkmate` package as the only direct dependency, installing `tulip` is a breeze.
 
-## Getting Started
+## Get Started
 
 For starters, let's use a data set available in base R: `AirPassengers`. It's not exactly something where `tulip` has any particular advantage, but it's a classic.
 
@@ -284,7 +284,6 @@ y <- rpois(n = 28, lambda = 2)
 
 ```{r intermittent_data_fit}
 fitted_model <- tulip::tulip(y = y, m = 12)
-fitted_model$family <- "bootstrap"
 ```
 
 ```{r intermittent_data_forecast}
@@ -318,7 +317,7 @@ Ruben Crevits and Christophe Croux (2017). *Forecasting using Robust Exponential
 
 Roland Fried (2004). *Robust Filtering of Time Series with Trends*. https://doi.org/10.1080/10485250410001656444
 
-Sarah Gelper, Roland Fried, Cristophe Croux (2007). *Robust Forecasting with Exponential and Holt-Winters Smoothing*. https://ssrn.com/abstract=1089493
+Sarah Gelper, Roland Fried, Cristophe Croux (2007). *Robust Forecasting with Exponential and Holt-Winters Smoothing*. http://dx.doi.org/10.2139/ssrn.1089403
 
 Andrew C. Harvey (1990). *Forecasting, Structural Time Series Models and the Kalman Filter*. https://doi.org/10.1017/CBO9781107049994
 
